@@ -1,0 +1,48 @@
+name: Trigger test suite
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run tests defined for the project
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up go
+        id: go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17
+
+      - name: Cache go modules
+        id: cache-go-mod
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install go modules
+        if: steps.cache-go-mod.outputs.cache-hit != 'true'
+        run: go mod download
+
+      - name: go fmt
+        run: |
+          go fmt ./...
+          git diff --exit-code
+
+      - name: Run tests
+        run: |
+          go test ./...
