@@ -13,7 +13,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -209,7 +208,10 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 	if err != nil {
 		return nil, err
 	}
-	if u.Scheme == "s3" {
+	isAws := u.Scheme == "s3"
+	isS3 := u.Scheme == "s3+http" || u.Scheme == "s3+https"
+	isSSL := strings.Contains(u.Scheme, "https")
+	if isAws || isS3 {
 		pw, ok := u.User.Password()
 		if !ok {
 			return nil, fmt.Errorf("password is required with s3:// OS")
@@ -226,32 +228,12 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 		if sepIndex != -1 {
 			keyPrefix = u.Path[sepIndex+2:]
 		}
-		return NewS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI)
-	}
-	// custom s3-compatible store
-	if u.Scheme == "s3+http" || u.Scheme == "s3+https" {
-		scheme := "http"
-		if u.Scheme == "s3+https" {
-			scheme = "https"
+		if isAws {
+			return NewS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI)
+		} else
+		{
+			return NewCustomS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI, isSSL)
 		}
-		region := "ignored"
-		base, bucket := path.Split(u.Path)
-		if len(base) > 1 && base[len(base)-1] == '/' {
-			base = base[:len(base)-1]
-			_, region = path.Split(base)
-		}
-		hosturl, err := url.Parse(input)
-		if err != nil {
-			return nil, err
-		}
-		hosturl.User = nil
-		hosturl.Scheme = scheme
-		hosturl.Path = ""
-		pw, ok := u.User.Password()
-		if !ok {
-			return nil, fmt.Errorf("password is required with s3:// OS")
-		}
-		return NewCustomS3Driver(hosturl.String(), bucket, region, u.User.Username(), pw, useFullAPI)
 	}
 	if u.Scheme == "gs" {
 		file := u.User.Username()

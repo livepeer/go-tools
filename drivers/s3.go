@@ -115,14 +115,15 @@ func NewS3Driver(region, bucket, accessKey, accessKeySecret string, keyPrefix st
 }
 
 // NewCustomS3Driver for creating S3-compatible stores other than S3 itself
-func NewCustomS3Driver(host, bucket, region, accessKey, accessKeySecret string, useFullAPI bool) (OSDriver, error) {
+func NewCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix string, useFullAPI bool, useSSL bool) (OSDriver, error) {
 	os := &S3OS{
 		host:               host,
 		bucket:             bucket,
 		awsAccessKeyID:     accessKey,
 		awsSecretAccessKey: accessKeySecret,
-		region:             region,
+		keyPrefix: keyPrefix,
 		useFullAPI:         useFullAPI,
+		region: "ignored",
 	}
 	if !useFullAPI {
 		os.host += "/" + bucket
@@ -134,7 +135,8 @@ func NewCustomS3Driver(host, bucket, region, accessKey, accessKeySecret string, 
 			WithRegion(os.region).
 			WithCredentials(creds).
 			WithEndpoint(host).
-			WithS3ForcePathStyle(true)
+			WithS3ForcePathStyle(true).
+			WithDisableSSL(!useSSL)
 		os.s3sess, err = session.NewSession(cfg)
 		if err != nil {
 			return nil, err
