@@ -230,8 +230,7 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 		}
 		if isAws {
 			return NewS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI)
-		} else
-		{
+		} else {
 			return NewCustomS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI, isSSL)
 		}
 	}

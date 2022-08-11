@@ -75,6 +75,17 @@ func s3Host(bucket string) string {
 	return fmt.Sprintf("https://%s.s3.amazonaws.com", bucket)
 }
 
+func customS3Host(host string, ssl bool) string {
+	if !strings.Contains("://", host) {
+		protocol := "http"
+		if ssl {
+			protocol = "https"
+		}
+		return fmt.Sprintf("%s://%s", protocol, host)
+	}
+	return host
+}
+
 func newS3Session(info *S3OSInfo) OSSession {
 	sess := &s3Session{
 		host:        info.Host,
@@ -117,13 +128,13 @@ func NewS3Driver(region, bucket, accessKey, accessKeySecret string, keyPrefix st
 // NewCustomS3Driver for creating S3-compatible stores other than S3 itself
 func NewCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix string, useFullAPI bool, useSSL bool) (OSDriver, error) {
 	os := &S3OS{
-		host:               host,
+		host:               customS3Host(host, useSSL),
 		bucket:             bucket,
 		awsAccessKeyID:     accessKey,
 		awsSecretAccessKey: accessKeySecret,
-		keyPrefix: keyPrefix,
+		keyPrefix:          keyPrefix,
 		useFullAPI:         useFullAPI,
-		region: "ignored",
+		region:             "ignored",
 	}
 	if !useFullAPI {
 		os.host += "/" + bucket
