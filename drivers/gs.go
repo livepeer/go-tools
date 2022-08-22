@@ -156,6 +156,20 @@ func (os *gsSession) createClient() error {
 	return nil
 }
 
+func (os *gsSession) Delete(ctx context.Context, name string) error {
+	if !os.useFullAPI {
+		return errors.New("delete not supported for non full api")
+	}
+	if os.client == nil {
+		if err := os.createClient(); err != nil {
+			return err
+		}
+	}
+	return os.client.Bucket(os.bucket).
+		Object(name).
+		Delete(ctx)
+}
+
 func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
 	if os.useFullAPI {
 		if os.client == nil {
