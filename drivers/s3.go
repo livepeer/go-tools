@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -40,10 +41,9 @@ const (
 	uploaderPartSize = 63 * 1024 * 1024
 )
 
-/* S3OS S3 backed object storage driver. For own storage access key and access key secret
-   should be specified. To give to other nodes access to own S3 storage so called 'POST' policy
-   is created. This policy is valid for S3_POLICY_EXPIRE_IN_HOURS hours.
-*/
+// S3OS S3 backed object storage driver. For own storage access key and access key secret
+// should be specified. To give to other nodes access to own S3 storage so called 'POST' policy
+// is created. This policy is valid for S3_POLICY_EXPIRE_IN_HOURS hours.
 type S3OS struct {
 	host               string
 	region             string
@@ -351,6 +351,22 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 
 	url := os.getAbsURL(*keyname)
 	return url, nil
+}
+
+func (os *s3Session) Delete(ctx context.Context, name string) error {
+	if os.s3svc == nil {
+		return errors.New("delete not supported for non full api")
+	}
+	params := &s3.DeleteObjectInput{
+		Bucket: aws.String(os.bucket),
+		Key:    aws.String(name),
+	}
+	if *params.Key == "" {
+		// if name is not specified, assume that this session already created with specific key
+		params.Key = aws.String(os.key)
+	}
+	_, err := os.s3svc.DeleteObjectWithContext(ctx, params)
+	return err
 }
 
 func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
