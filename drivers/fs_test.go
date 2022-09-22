@@ -28,7 +28,7 @@ func TestFsOS(t *testing.T) {
 	u, err := url.Parse("/tmp/")
 	assert.NoError((err))
 	storage := NewFSDriver(u)
-	sess := storage.NewSession(("driver-test")).(*FSSession)
+	sess := storage.NewSession("driver-test").(*FSSession)
 	path, err := sess.SaveData(context.TODO(), "name1/1.ts", bytes.NewReader(rndData), nil, 0)
 	assert.NoError(err)
 	defer os.Remove(path)
