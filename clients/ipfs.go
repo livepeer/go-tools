@@ -112,7 +112,7 @@ func (p *pinataClient) List(ctx context.Context, pageSize, pageOffset int, cid s
 	}
 	err = p.DoRequest(ctx, Request{
 		Method: "GET",
-		URL: url,
+		URL:    url,
 	}, &pl)
 	if err != nil {
 		return nil, -1, err

@@ -21,7 +21,7 @@ func TestIpfsOS(t *testing.T) {
 	}
 	// create random data
 	fileName := uuid.New().String() + ".ts"
-	fileSize := int64(1024*10)
+	fileSize := int64(1024 * 10)
 	rndData := make([]byte, fileSize)
 	rand.Read(rndData)
 	assert := assert.New(t)
