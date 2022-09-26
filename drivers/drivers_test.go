@@ -49,6 +49,16 @@ func TestFsPath(t *testing.T) {
 	testPath("tmp/test/stream.ts")
 }
 
+func TestIpfsUrls(t *testing.T) {
+	assert := assert.New(t)
+	os, err := ParseOSURL("ipfs://pinata.cloud", true)
+	assert.Equal(nil, err)
+	_, isfs := os.(*IpfsOS)
+	assert.Equal(true, isfs)
+	_, err = ParseOSURL("ipfs://", true)
+	assert.NotNil(err)
+}
+
 func TestCustomS3URL(t *testing.T) {
 	assert := assert.New(t)
 	os, err := ParseOSURL("s3+http://user:password@example.com:9000/bucket-name", true)

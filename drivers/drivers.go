@@ -62,10 +62,11 @@ type FileInfoReader struct {
 }
 
 var AvailableDrivers = []OSDriver{
-	&S3OS{},
 	&FSOS{},
 	&GsOS{},
+	&IpfsOS{},
 	&MemoryOS{},
+	&S3OS{},
 }
 
 type PageInfo interface {
@@ -232,6 +233,15 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 			return NewS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI)
 		} else {
 			return NewCustomS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI, isSSL)
+		}
+	}
+	if u.Scheme == "ipfs" {
+		// make it explicit that it's Pinata API, not IPFS node
+		if u.Host == "pinata.cloud" {
+			password, _ := u.User.Password()
+			return NewIpfsDriver(u.User.Username(), password), nil
+		} else {
+			return nil, fmt.Errorf("unsupported IPFS provider: %s", u.Host)
 		}
 	}
 	if u.Scheme == "gs" {
