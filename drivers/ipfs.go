@@ -56,20 +56,30 @@ func (ostore *IpfsOS) Description() string {
 	return "Pinata cloud IPFS driver."
 }
 
-func (ostore *IpfsSession) OS() OSDriver {
-	return ostore.os
+func (session *IpfsSession) OS() OSDriver {
+	return session.os
 }
 
-func (ostore *IpfsSession) EndSession() {
+func (session *IpfsSession) EndSession() {
 	// no op
 }
 
-func (ostore *IpfsSession) ListFiles(ctx context.Context, dir, delim string) (PageInfo, error) {
-	panic("Listing is not supported by Pinata IPFS driver")
+func (session *IpfsSession) ListFiles(ctx context.Context, cid, delim string) (PageInfo, error) {
+	pinList, _, err := session.client.List(ctx, 1, 0, cid)
+	pi := &singlePageInfo{
+		files:       []FileInfo{},
+		directories: []string{},
+	}
+	if err == nil && pinList.Count == 1 {
+		size := pinList.Pins[0].Size
+		pi.files = append(pi.files, FileInfo{Name: pinList.Pins[0].Metadata.Name, Size: &size,
+			ETag: pinList.Pins[0].IPFSPinHash})
+	}
+	return pi, err
 }
 
-func (ostore *IpfsSession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
-	fullPath := path.Join(ostore.filename, name)
+func (session *IpfsSession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
+	fullPath := path.Join(session.filename, name)
 	// just get the file through Pinata HTTP gateway
 	resp, err := http.Get("https://gateway.pinata.cloud/ipfs/" + fullPath)
 	if err != nil {
@@ -85,31 +95,31 @@ func (ostore *IpfsSession) ReadData(ctx context.Context, name string) (*FileInfo
 	return res, nil
 }
 
-func (ostore *IpfsSession) IsExternal() bool {
+func (session *IpfsSession) IsExternal() bool {
 	return false
 }
 
-func (ostore *IpfsSession) IsOwn(url string) bool {
+func (session *IpfsSession) IsOwn(url string) bool {
 	return true
 }
 
-func (ostore *IpfsSession) GetInfo() *OSInfo {
+func (session *IpfsSession) GetInfo() *OSInfo {
 	return nil
 }
 
-func (ostore *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
 	// concatenate filename with name argument to get full filename, both may be empty
-	fullPath := ostore.getAbsolutePath(name)
+	fullPath := session.getAbsolutePath(name)
 	if fullPath == "" {
 		// pinata requires name to be set
 		fullPath = "data.bin"
 	}
-	cid, _, err := ostore.client.PinContent(ctx, fullPath, "", data)
+	cid, _, err := session.client.PinContent(ctx, fullPath, "", data)
 	return cid, err
 }
 
-func (ostore *IpfsSession) getAbsolutePath(name string) string {
-	resPath := path.Clean(ostore.filename + "/" + name)
+func (session *IpfsSession) getAbsolutePath(name string) string {
+	resPath := path.Clean(session.filename + "/" + name)
 	if resPath == "/" {
 		return ""
 	}
