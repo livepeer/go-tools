@@ -264,6 +264,10 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 	if u.Scheme == "" {
 		return NewFSDriver(u), nil
 	}
+	if u.Scheme == "file" {
+		u.Scheme = ""
+		return NewFSDriver(u), nil
+	}
 	return nil, fmt.Errorf("unrecognized OS scheme: %s", u.Scheme)
 }
 
