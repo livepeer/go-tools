@@ -272,6 +272,10 @@ func (os *s3Session) ListFiles(ctx context.Context, prefix, delim string) (PageI
 		params := &s3.ListObjectsInput{
 			Bucket: bucket,
 		}
+		// TODO: Remove this compat once legacy clients stop sending the full path for listing
+		if os.key != "" && !strings.HasPrefix(prefix, os.key+"/") {
+			prefix = path.Join(os.key, prefix)
+		}
 		if prefix != "" {
 			params.Prefix = aws.String(prefix)
 		}
@@ -296,14 +300,13 @@ func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader
 	if os.s3svc == nil {
 		return nil, fmt.Errorf("Not implemented")
 	}
-	key := name
-	// if name is not specified, assume that this session already created with specific key
-	if key == "" {
-		key = os.key
+	// TODO: Remove this compat once legacy clients stop sending the full path for reading
+	if os.key != "" && !strings.HasPrefix(name, os.key+"/") {
+		name = path.Join(os.key, name)
 	}
 	params := &s3.GetObjectInput{
 		Bucket: aws.String(os.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(name),
 	}
 	resp, err := os.s3svc.GetObjectWithContext(ctx, params)
 	if err != nil {
