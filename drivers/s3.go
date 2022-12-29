@@ -40,10 +40,9 @@ const (
 	uploaderPartSize = 63 * 1024 * 1024
 )
 
-/* S3OS S3 backed object storage driver. For own storage access key and access key secret
-   should be specified. To give to other nodes access to own S3 storage so called 'POST' policy
-   is created. This policy is valid for S3_POLICY_EXPIRE_IN_HOURS hours.
-*/
+// S3OS S3 backed object storage driver. For own storage access key and access key secret
+// should be specified. To give to other nodes access to own S3 storage so called 'POST' policy
+// is created. This policy is valid for S3_POLICY_EXPIRE_IN_HOURS hours.
 type S3OS struct {
 	host               string
 	region             string
@@ -315,8 +314,12 @@ func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader
 	res := &FileInfoReader{
 		Body: resp.Body,
 	}
-	res.LastModified = *resp.LastModified
-	res.ETag = *resp.ETag
+	if resp.LastModified != nil {
+		res.LastModified = *resp.LastModified
+	}
+	if resp.ETag != nil {
+		res.ETag = *resp.ETag
+	}
 	res.Name = name
 	res.Size = resp.ContentLength
 	if len(resp.Metadata) > 0 {

@@ -93,3 +93,25 @@ func TestMinioS3Upload(t *testing.T) {
 		fmt.Println("No S3 credentials, test skipped")
 	}
 }
+
+func TestStorjS3Read(t *testing.T) {
+	s3key := os.Getenv("STORJ_S3_KEY")
+	s3secret := os.Getenv("STORJ_S3_SECRET")
+	s3bucket := os.Getenv("STORJ_S3_BUCKET")
+	s3Path := os.Getenv("STORJ_S3_PATH")
+	assert := assert.New(t)
+	if s3key != "" && s3secret != "" && s3bucket != "" && s3Path != "" {
+		fullUrl := fmt.Sprintf("s3+https://%s:%s@gateway.storjshare.io/%s", s3key, s3secret, s3bucket)
+		os, err := ParseOSURL(fullUrl, true)
+		assert.NoError(err)
+		session := os.NewSession("")
+		data, err := session.ReadData(context.Background(), s3Path)
+		assert.NoError(err)
+		osBuf := new(bytes.Buffer)
+		osBuf.ReadFrom(data.Body)
+		osData := osBuf.Bytes()
+		assert.True(len(osData) > 0)
+	} else {
+		fmt.Println("No S3 credentials, test skipped")
+	}
+}
