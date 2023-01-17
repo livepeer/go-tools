@@ -67,6 +67,11 @@ func (ostore *FSOS) Description() string {
 	return "File system driver."
 }
 
+func (ostore *FSOS) Publish() string {
+	// not supported
+	return ""
+}
+
 func (ostore *FSSession) OS() OSDriver {
 	return ostore.os
 }

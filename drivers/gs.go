@@ -130,6 +130,11 @@ func (os *GsOS) NewSession(path string) OSSession {
 	return gs
 }
 
+func (os *GsOS) Publish() string {
+	// not supported
+	return ""
+}
+
 func newGSSession(info *S3OSInfo) OSSession {
 	sess := &s3Session{
 		host:        info.Host,

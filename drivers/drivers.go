@@ -43,6 +43,7 @@ type OSDriver interface {
 	NewSession(path string) OSSession
 	Description() string
 	UriSchemes() []string
+	Publish() string
 }
 
 // ErrNoNextPage indicates that there is no next page in ListFiles
@@ -266,6 +267,10 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 	if u.Scheme == "file" {
 		u.Scheme = ""
 		return NewFSDriver(u), nil
+	}
+	if u.Scheme == "w3" {
+		proof, _ := u.User.Password()
+		return NewW3Driver(input, proof), nil
 	}
 	return nil, fmt.Errorf("unrecognized OS scheme: %s", u.Scheme)
 }

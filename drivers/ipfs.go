@@ -56,6 +56,11 @@ func (ostore *IpfsOS) Description() string {
 	return "Pinata cloud IPFS driver."
 }
 
+func (ostore *IpfsOS) Publish() string {
+	// not supported
+	return ""
+}
+
 func (session *IpfsSession) OS() OSDriver {
 	return session.os
 }
