@@ -265,6 +265,10 @@ func (s3pi *s3pageInfo) listFiles() error {
 	return nil
 }
 
+func (os *s3Session) IsLocationAddressable() bool {
+	return true
+}
+
 func (os *s3Session) ListFiles(ctx context.Context, prefix, delim string) (PageInfo, error) {
 	if os.s3svc != nil {
 		bucket := aws.String(os.bucket)

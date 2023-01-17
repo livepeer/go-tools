@@ -56,6 +56,10 @@ func (ostore *IpfsOS) Description() string {
 	return "Pinata cloud IPFS driver."
 }
 
+func (session *IpfsSession) IsLocationAddressable() bool {
+	return false
+}
+
 func (session *IpfsSession) OS() OSDriver {
 	return session.os
 }

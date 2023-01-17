@@ -128,6 +128,9 @@ type OSSession interface {
 	// Indicates whether this is the correct OS for a given URL
 	IsOwn(url string) bool
 
+	// Indicates whether path-based location is supported, the file is accessible by its path, e.g., "s3:/bucket/path/file1.txt"
+	IsLocationAddressable() bool
+
 	// ListFiles return list of files
 	ListFiles(ctx context.Context, prefix, delim string) (PageInfo, error)
 
@@ -266,6 +269,10 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 	if u.Scheme == "file" {
 		u.Scheme = ""
 		return NewFSDriver(u), nil
+	}
+	if u.Scheme == "w3" {
+		proof, _ := u.User.Password()
+		return NewW3Driver(input, proof), nil
 	}
 	return nil, fmt.Errorf("unrecognized OS scheme: %s", u.Scheme)
 }

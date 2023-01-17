@@ -67,6 +67,10 @@ func (ostore *FSOS) Description() string {
 	return "File system driver."
 }
 
+func (ostore *FSSession) IsLocationAddressable() bool {
+	return true
+}
+
 func (ostore *FSSession) OS() OSDriver {
 	return ostore.os
 }

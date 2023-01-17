@@ -143,6 +143,10 @@ func newGSSession(info *S3OSInfo) OSSession {
 	return sess
 }
 
+func (os *gsSession) IsLocationAddressable() bool {
+	return true
+}
+
 func (os *gsSession) OS() OSDriver {
 	return os.gos
 }
