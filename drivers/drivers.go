@@ -13,6 +13,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -269,8 +270,12 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 		return NewFSDriver(u), nil
 	}
 	if u.Scheme == "w3" {
-		proof, _ := u.User.Password()
-		return NewW3Driver(input, proof), nil
+		ucanKey := u.User.Username()
+		ucanProof, _ := u.User.Password()
+		splitPath := strings.Split(u.Path, "/")
+		pubId := splitPath[1]
+		filePath := path.Join(splitPath[2:]...)
+		return NewW3sDriver(ucanKey, ucanProof, pubId, filePath), nil
 	}
 	return nil, fmt.Errorf("unrecognized OS scheme: %s", u.Scheme)
 }
