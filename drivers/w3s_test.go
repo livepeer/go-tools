@@ -75,6 +75,10 @@ func TestW3sOS(t *testing.T) {
 
 		require.Equal(tf.data, d)
 	}
+
+	// TODO: unit test
+	// TODO: parse driver
+	// TODO: test with catalyst-api
 }
 
 func randFilename() string {

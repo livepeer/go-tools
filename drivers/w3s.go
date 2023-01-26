@@ -124,7 +124,7 @@ func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Re
 	}
 	defer deleteFile(filePath)
 
-	carPath, fileCid, err := packCar(ctx, filePath)
+	carPath, fileCid, err := ipfsCarPack(ctx, filePath)
 	if err != nil {
 		return "", err
 	}
@@ -156,30 +156,6 @@ func toFile(data io.Reader) (string, error) {
 
 	defer fRaw.Close()
 	return fRaw.Name(), nil
-}
-
-func packCar(ctx context.Context, filePath string) (string, string, error) {
-	fCar, err := os.CreateTemp("", "w3s-car")
-	if err != nil {
-		return "", "", err
-	}
-
-	out, err := exec.CommandContext(ctx, "ipfs-car", "--wrapWithDirectory", "false", "--pack", filePath, "--output", fCar.Name()).Output()
-	if err != nil {
-		deleteFile(fCar.Name())
-		return "", "", err
-	}
-
-	r := regexp.MustCompile(`root CID: ([A-Za-z0-9]+)`)
-	matches := r.FindStringSubmatch(string(out))
-	if len(matches) < 2 {
-		deleteFile(fCar.Name())
-		return "", "", fmt.Errorf("cannot find root file CID in the output: %s", string(out))
-	}
-	fileCid := matches[1]
-
-	defer fCar.Close()
-	return fCar.Name(), fileCid, nil
 }
 
 func (rc *rootCar) addFile(ctx context.Context, dirPath, filename, fileCid, carCid string) error {
@@ -343,6 +319,30 @@ func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string)
 	rc.carCids = append(rc.carCids, storedCid)
 
 	return &format.Link{Name: linkName, Cid: newN.Cid()}, nil
+}
+
+func ipfsCarPack(ctx context.Context, filePath string) (string, string, error) {
+	fCar, err := os.CreateTemp("", "w3s-car")
+	if err != nil {
+		return "", "", err
+	}
+
+	out, err := exec.CommandContext(ctx, "ipfs-car", "--wrapWithDirectory", "false", "--pack", filePath, "--output", fCar.Name()).Output()
+	if err != nil {
+		deleteFile(fCar.Name())
+		return "", "", err
+	}
+
+	r := regexp.MustCompile(`root CID: ([A-Za-z0-9]+)`)
+	matches := r.FindStringSubmatch(string(out))
+	if len(matches) < 2 {
+		deleteFile(fCar.Name())
+		return "", "", fmt.Errorf("cannot find root file CID in the output: %s", string(out))
+	}
+	fileCid := matches[1]
+
+	defer fCar.Close()
+	return fCar.Name(), fileCid, nil
 }
 
 func w3StoreCar(ctx context.Context, carPath string) (string, error) {
