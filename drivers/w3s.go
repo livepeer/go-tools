@@ -21,25 +21,26 @@ import (
 	"time"
 )
 
-// This represents the CAR structure, the data is removed after the CAR is uploaded / published.
-// Note that this makes the driver stateful as it stores its state in memory.
 var (
 	cidV1 = merkledag.V1CidPrefix()
 
-	carsToPublish map[string]*carToPublish
-	mu            sync.Mutex
+	// This represents the main CAR directory structure organized by pubId.
+	// Data for each pubId is removed after the whole CAR directory is published.
+	dataToPublish   map[string]*rootCar = make(map[string]*rootCar)
+	dataToPublishMu sync.Mutex
 )
 
-type carToPublish struct {
-	root       *merkledag.ProtoNode
-	dagService format.DAGService
-	carCids    []string
+type rootCar struct {
+	root    *merkledag.ProtoNode
+	dag     format.DAGService
+	carCids []string
+	mu      sync.Mutex
 }
 
-func newCarToPublish() *carToPublish {
-	return &carToPublish{
-		root:       newDagNodeDirectory(),
-		dagService: merkledag.NewDAGService(bserv.New(blockstore.NewBlockstore(dssync.MutexWrap(ds.NewMapDatastore())), nil)),
+func newCarToPublish() *rootCar {
+	return &rootCar{
+		root: newDir(),
+		dag:  merkledag.NewDAGService(bserv.New(blockstore.NewBlockstore(dssync.MutexWrap(ds.NewMapDatastore())), nil)),
 	}
 }
 
@@ -61,12 +62,6 @@ type W3sSession struct {
 }
 
 func NewW3sDriver(ucanKey, ucanProof, dirPath, pubId string) *W3sOS {
-	mu.Lock()
-	defer mu.Unlock()
-	if carsToPublish == nil {
-		carsToPublish = make(map[string]*carToPublish)
-	}
-
 	return &W3sOS{
 		ucanKey:   ucanKey,
 		ucanProof: ucanProof,
@@ -86,7 +81,6 @@ func (ostore *W3sOS) NewSession(filename string) OSSession {
 }
 
 func (ostore *W3sOS) UriSchemes() []string {
-	// TODO
 	return []string{}
 }
 
@@ -103,95 +97,130 @@ func (session *W3sSession) EndSession() {
 }
 
 func (session *W3sSession) ListFiles(ctx context.Context, cid, delim string) (PageInfo, error) {
-	// TODO
+	// not supported
 	return nil, nil
 }
 
 func (session *W3sSession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
-	// TODO
+	// not supported
 	return nil, nil
 }
 
 func (session *W3sSession) IsExternal() bool {
-	// TODO
 	return false
 }
 
 func (session *W3sSession) IsOwn(url string) bool {
-	// TODO
 	return true
 }
 
 func (session *W3sSession) GetInfo() *OSInfo {
-	// TODO
 	return nil
 }
 
 func (session *W3sSession) getAbsolutePath(name string) string {
-	// TODO
+	// not supported
 	return ""
 }
 
 func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
-	filePath, err := createFile(data)
+	filePath, err := toFile(data)
 	if err != nil {
 		return "", err
 	}
 	defer deleteFile(filePath)
 
-	carPath, fileCid, err := packCar(filePath)
+	carPath, fileCid, err := packCar(ctx, filePath)
 	if err != nil {
 		return "", err
 	}
 	defer deleteFile(carPath)
-	fmt.Println("FILE CID:")
-	fmt.Println(fileCid)
 
-	carCid, err := storeCar(carPath)
+	carCid, err := storeCar(ctx, carPath)
 	if err != nil {
 		return "", err
 	}
-	//carCid := "bagbaieraqrx7ttm5hrcef6uvkx25z2l7bjvqfixmeo6q6cg5fqir7qa2n5vq"
-	fmt.Println("CAR CID:")
-	fmt.Println(carCid)
 
-	session.addToPublish(name, fileCid, carCid)
+	session.os.addToPublish(name, fileCid, carCid)
 
 	return fileCid, nil
 }
 
-func (session *W3sSession) addToPublish(fileName, fileCid, carCid string) {
-	mu.Lock()
-	defer mu.Unlock()
+func toFile(data io.Reader) (string, error) {
+	fRaw, err := os.CreateTemp("", "w3s-raw")
+	if err != nil {
+		return "", err
+	}
 
-	dirPaths := strings.FieldsFunc(session.os.dirPath, func(c rune) bool { return c == '/' })
-	//filePaths := strings.Split(strings.Trim(session.os.dirPath, "/"), "/")
-	//filePaths = append(filePaths, fileName)
+	if _, err = io.Copy(fRaw, data); err != nil {
+		deleteFile(fRaw.Name())
+		return "", err
+	}
 
-	c := session.os.getCarToPublish()
-	c.root, _ = addFile(c, dirPaths, fileName, fileCid)
-	c.carCids = append(c.carCids, carCid)
+	defer fRaw.Close()
+	return fRaw.Name(), nil
 }
 
-func addFile(c *carToPublish, paths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
-	return addFileToNode(c.root, c, paths, filename, fileCid)
+func packCar(ctx context.Context, filePath string) (string, string, error) {
+	fCar, err := os.CreateTemp("", "w3s-car")
+	if err != nil {
+		return "", "", err
+	}
+
+	out, err := exec.CommandContext(ctx, "ipfs-car", "--wrapWithDirectory", "false", "--pack", filePath, "--output", fCar.Name()).Output()
+	if err != nil {
+		deleteFile(fCar.Name())
+		return "", "", err
+	}
+
+	r := regexp.MustCompile(`root CID: ([A-Za-z0-9]+)`)
+	matches := r.FindStringSubmatch(string(out))
+	if len(matches) < 2 {
+		deleteFile(fCar.Name())
+		return "", "", fmt.Errorf("cannot find root file CID in the output: %s", string(out))
+	}
+	fileCid := matches[1]
+
+	defer fCar.Close()
+	return fCar.Name(), fileCid, nil
 }
 
-func addFileToNode(n *merkledag.ProtoNode, c *carToPublish, paths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
+func storeCar(ctx context.Context, carPath string) (string, error) {
+	out, err := exec.CommandContext(ctx, "w3", "can", "store", "add", carPath).Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func (ostore *W3sOS) addToPublish(fileName, fileCid, carCid string) {
+	// split path by "/", ignore empty strings
+	dirPaths := strings.FieldsFunc(ostore.dirPath, func(c rune) bool { return c == '/' })
+
+	rCar := ostore.getRootCar()
+	// TODO: Continue here
+	// TODO: Add/fix locks
+	//rCar.mu.Lock()
+	//defer rCar.mu.Unlock()
+	rCar.root, _ = addFileToNode(rCar.root, rCar, dirPaths, fileName, fileCid)
+	rCar.carCids = append(rCar.carCids, carCid)
+}
+
+func addFileToNode(n *merkledag.ProtoNode, c *rootCar, paths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
 	if len(paths) == 0 {
 		fCid, err := cid.Parse(fileCid)
 		if err != nil {
 			return nil, err
 		}
 		n.AddRawLink(filename, &format.Link{Cid: fCid})
-		c.dagService.Add(context.TODO(), n)
+		c.dag.Add(context.TODO(), n)
 		return n, nil
 	}
 
 	head, tail := paths[0], paths[1:]
-	pn, err := n.GetLinkedProtoNode(context.TODO(), c.dagService, head)
+	pn, err := n.GetLinkedProtoNode(context.TODO(), c.dag, head)
 	if err == merkledag.ErrLinkNotFound {
-		pn = newDagNodeDirectory()
+		pn = newDir()
 		n.AddNodeLink(head, pn)
 	} else if err != nil {
 		return nil, err
@@ -205,26 +234,27 @@ func addFileToNode(n *merkledag.ProtoNode, c *carToPublish, paths []string, file
 	if err != nil {
 		return nil, err
 	}
-	err = c.dagService.Add(context.TODO(), nn)
+	err = c.dag.Add(context.TODO(), nn)
 	if err != nil {
 		return nil, err
 	}
 	return nn, nil
 }
 
-func newDagNodeDirectory() *merkledag.ProtoNode {
+func newDir() *merkledag.ProtoNode {
 	n := unixfs.EmptyDirNode()
 	n.SetCidBuilder(cidV1)
 	return n
 }
 
-func (ostore *W3sOS) getCarToPublish() *carToPublish {
-	pubId := ostore.pubId
-	if _, ok := carsToPublish[pubId]; !ok {
-		carsToPublish[pubId] = newCarToPublish()
+func (ostore *W3sOS) getRootCar() *rootCar {
+	dataToPublishMu.Lock()
+	dataToPublishMu.Unlock()
+
+	if _, ok := dataToPublish[ostore.pubId]; !ok {
+		dataToPublish[ostore.pubId] = newCarToPublish()
 	}
-	root, _ := carsToPublish[pubId]
-	return root
+	return dataToPublish[ostore.pubId]
 }
 
 func makeNodes(n *node, paths []string) *node {
@@ -244,49 +274,6 @@ func newNode() *node {
 	return &node{children: make(map[string]*node)}
 }
 
-func createFile(data io.Reader) (string, error) {
-	fRaw, err := os.CreateTemp("", "w3-raw")
-	if err != nil {
-		return "", err
-	}
-	defer fRaw.Close()
-
-	if _, err = io.Copy(fRaw, data); err != nil {
-		deleteFile(fRaw.Name())
-		return "", err
-	}
-	return fRaw.Name(), nil
-}
-
-func packCar(filePath string) (string, string, error) {
-	fCar, err := os.CreateTemp("", "w3-car")
-	if err != nil {
-		return "", "", err
-	}
-	defer fCar.Close()
-
-	out, err := exec.Command("ipfs-car", "--wrapWithDirectory", "false", "--pack", filePath, "--output", fCar.Name()).Output()
-	if err != nil {
-		deleteFile(fCar.Name())
-		return "", "", err
-	}
-	r := regexp.MustCompile(`root CID: ([A-Za-z0-9]+)`)
-	matches := r.FindStringSubmatch(string(out))
-	if len(matches) < 2 {
-		deleteFile(fCar.Name())
-		return "", "", fmt.Errorf("cannot find root file CID in the output: %s", string(out))
-	}
-	return fCar.Name(), matches[1], nil
-}
-
-func storeCar(carPath string) (string, error) {
-	out, err := exec.Command("w3", "can", "store", "add", carPath).Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(out)), nil
-}
-
 func deleteFile(filePath string) {
 	os.RemoveAll(filePath)
 }
@@ -301,56 +288,27 @@ func deleteFile(filePath string) {
 //}
 
 func (ostore *W3sOS) Publish() string {
-	mu.Lock()
-	defer mu.Unlock()
+	//dataToPublishMu.Lock()
+	//defer dataToPublishMu.Unlock()
 
 	carFile, _ := os.Create("test.car")
 	defer carFile.Close()
 
-	c := ostore.getCarToPublish()
+	c := ostore.getRootCar()
 
-	rootLink := storeDirRecursively(c.root, c.dagService, c, "")
-
-	//time.Sleep(1 * time.Second)
-	//uploadCmd := fmt.Sprintf(strings.Join([]string{"w3", "can", "upload", "add", dir.Cid().String(), "bagbaieraryp54uvfvxrpedxmmoms36g2hfanxuimvzk3i4l54ndaylz67voa", storedCid}, " "))
-	//fmt.Println(uploadCmd)
+	rootLink := storeDirRecursively(c.root, c.dag, c, "")
 
 	out, err := exec.Command("w3", "can", "upload", "add", rootLink.Cid.String(), c.carCids[0], c.carCids[1], c.carCids[2], c.carCids[3], c.carCids[4]).Output()
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println(string(out))
 	}
-	fmt.Println(string(out))
 	fmt.Println("Stored at: ", rootLink.Cid.String())
 
-	//var cidsToUpload []string
-	//root := ostore.getRoot()
-	//fileCid, carCid, err := createDirCar(root, &cidsToUpload)
-	//if err != nil {
-	//	// TODO: handle error
-	//}
-	//fmt.Printf("w3 upload %s %s cidsToUpload\n", fileCid, carCid)
-	//
-	//fmt.Println(cidsToUpload)
-	//
-	//// Store the CAR directory in web3.storage
-	//// Currently uploading the whole tmp dir with `w3 up`, but we'll change it constructing the CAR dir structure on our own
-	////prefix, _ := ostore.getPrefixAndPath()
-	////mu.Lock()
-	////tmpDir := carsToPublish[prefix].tmpDir
-	////mu.Unlock()
-	////
-	////fCar := upload(path.Join(tmpDir, prefix))
-	////os.RemoveAll(tmpDir)
-	////mu.Lock()
-	////delete(carsToPublish, prefix)
-	////mu.Unlock()
-	////
-	////return fCar.url
 	return fmt.Sprintf("https://%s.ipfs.w3s.link", rootLink.Cid)
 }
 
-func storeDirRecursively(n format.Node, dagService format.DAGService, c *carToPublish, name string) *format.Link {
+func storeDirRecursively(n format.Node, dagService format.DAGService, c *rootCar, name string) *format.Link {
 	var nonDirLinks []*format.Link
 	for _, l := range n.Links() {
 		child, err := l.GetNode(context.TODO(), dagService)
@@ -361,60 +319,15 @@ func storeDirRecursively(n format.Node, dagService format.DAGService, c *carToPu
 		}
 	}
 
-	res := newDagNodeDirectory()
+	res := newDir()
 	res.SetLinks(nonDirLinks)
 	dagService.Add(context.TODO(), res)
 
 	carFile, _ := os.CreateTemp("", "car")
 	defer carFile.Close()
 	car.WriteCar(context.TODO(), dagService, []cid.Cid{res.Cid()}, carFile)
-	storedCid, _ := storeCar(carFile.Name())
+	storedCid, _ := storeCar(context.TODO(), carFile.Name())
 	c.carCids = append(c.carCids, storedCid)
 	return &format.Link{Name: name, Cid: res.Cid()}
 
-}
-
-func createDirCar(n *node, cidsToUpload *[]string) (string, string, error) {
-	if len(n.children) > 0 {
-		var dirEntries []string
-
-		// Create and store cars for each subdirectory
-		for name, val := range n.children {
-			fmt.Printf("Creating dir car for: %s\n", name)
-			fileCid, carCid, err := createDirCar(val, cidsToUpload)
-			if err != nil {
-				return "", "", err
-			}
-			*cidsToUpload = append(*cidsToUpload, carCid)
-
-			dirEntries = append(dirEntries, fmt.Sprintf("{\"name\":\"%s\",\"link\":{\"cid\":\"%s\"}}\n", name, fileCid))
-		}
-
-		carPath, dirCid, err := createCar(dirEntries)
-		if err != nil {
-			return "", "", err
-		}
-		//carCid, err := storeCar(carPath)
-		//if err != nil {
-		//	return "", "", err
-		//}
-		fmt.Println(carPath)
-		carCid := "#$%^"
-		return dirCid, carCid, nil
-	}
-
-	return n.fileCid, n.carCid, nil
-}
-
-func createCar(entries []string) (string, string, error) {
-	// TODO: Check if we can use go-car library to create a directory from file links
-	// TODO: Plan B: Use JS code from Yondon
-	// https://golang.hotexamples.com/examples/github.com.ipfs.go-ipfs.unixfs/-/FilePBData/golang-filepbdata-function-examples.html#0xbb2d9e901a8466c5fab9a918fdee22e9e56885f589b08d5fd56e09b8422eddf8-449,,469,
-	// https://github.com/web3-storage/go-w3s-client/blob/main/put.go#L29
-	return "file-path", "car-cid", nil
-
-}
-
-func (ostore *W3sOS) getPrefixAndPath() (string, string) {
-	return ostore.pubId, ostore.dirPath
 }
