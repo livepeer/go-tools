@@ -309,22 +309,19 @@ func (ostore *W3sOS) Publish() string {
 
 	c := ostore.getCarToPublish()
 
-	car.WriteCar(context.TODO(), c.dagService, []cid.Cid{c.root.Cid()}, carFile)
-
-	fmt.Println("Hello World")
-	storedCid, _ := storeCar("test.car")
+	rootLink := storeDirRecursively(c.root, c.dagService, c, "")
 
 	//time.Sleep(1 * time.Second)
 	//uploadCmd := fmt.Sprintf(strings.Join([]string{"w3", "can", "upload", "add", dir.Cid().String(), "bagbaieraryp54uvfvxrpedxmmoms36g2hfanxuimvzk3i4l54ndaylz67voa", storedCid}, " "))
 	//fmt.Println(uploadCmd)
 
-	out, err := exec.Command("w3", "can", "upload", "add", c.root.Cid().String(), storedCid, c.carCids[0]).Output()
+	out, err := exec.Command("w3", "can", "upload", "add", rootLink.Cid.String(), c.carCids[0], c.carCids[1], c.carCids[2], c.carCids[3], c.carCids[4]).Output()
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println(string(out))
 	}
 	fmt.Println(string(out))
-	fmt.Println("Stored at: ", c.root.Cid().String())
+	fmt.Println("Stored at: ", rootLink.Cid.String())
 
 	//var cidsToUpload []string
 	//root := ostore.getRoot()
@@ -351,6 +348,30 @@ func (ostore *W3sOS) Publish() string {
 	////
 	////return fCar.url
 	return ""
+}
+
+func storeDirRecursively(n format.Node, dagService format.DAGService, c *carToPublish, name string) *format.Link {
+	var nonDirLinks []*format.Link
+	for _, l := range n.Links() {
+		child, err := l.GetNode(context.TODO(), dagService)
+		if err != nil { // link to a file
+			nonDirLinks = append(nonDirLinks, l)
+		} else { // link to a directory
+			nonDirLinks = append(nonDirLinks, storeDirRecursively(child, dagService, c, l.Name))
+		}
+	}
+
+	res := newDagNodeDirectory()
+	res.SetLinks(nonDirLinks)
+	dagService.Add(context.TODO(), res)
+
+	carFile, _ := os.CreateTemp("", "car")
+	defer carFile.Close()
+	car.WriteCar(context.TODO(), dagService, []cid.Cid{res.Cid()}, carFile)
+	storedCid, _ := storeCar(carFile.Name())
+	c.carCids = append(c.carCids, storedCid)
+	return &format.Link{Name: name, Cid: res.Cid()}
+
 }
 
 func createDirCar(n *node, cidsToUpload *[]string) (string, string, error) {

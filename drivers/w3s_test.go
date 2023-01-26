@@ -7,10 +7,24 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	require2 "github.com/stretchr/testify/require"
+	"io"
 	"os"
 	"os/exec"
 	"testing"
 )
+
+type testFile struct {
+	name string
+	data io.Reader
+}
+
+func randFile() testFile {
+	name := uuid.New().String() + ".ts"
+	size := int64(1024 * 10)
+	rndData := make([]byte, size)
+	rand.Read(rndData)
+	return testFile{name: name, data: bytes.NewReader(rndData)}
+}
 
 func TestW3sOS(t *testing.T) {
 	require := require2.New(t)
@@ -32,26 +46,37 @@ func TestW3sOS(t *testing.T) {
 		return
 	}
 
-	// Configure Driver
-	path := "/somepath/video/hls/"
-	//path := "/"
 	pubId := uuid.New().String()
-	storage := NewW3sDriver(ucanKey, ucanProof, path, pubId)
-	sess := storage.NewSession("").(*W3sSession)
 
-	// Create random data
-	fileName := uuid.New().String() + ".ts"
-	fileSize := int64(1024 * 10)
-	rndData := make([]byte, fileSize)
-	rand.Read(rndData)
-
-	// Store data
-	cid, err := sess.SaveData(context.TODO(), fileName, bytes.NewReader(rndData), nil, 0)
+	// Add files to foo/video/hls dir
+	sess := NewW3sDriver(ucanKey, ucanProof, "/foo/video/hls/", pubId).NewSession("").(*W3sSession)
+	rndFile := randFile()
+	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
 	require.NoError(err)
-	fmt.Println(cid)
+
+	// Add files to bar/video/hls dir
+	sess = NewW3sDriver(ucanKey, ucanProof, "/bar/video/hls/", pubId).NewSession("").(*W3sSession)
+	rndFile = randFile()
+	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
+	require.NoError(err)
+	rndFile = randFile()
+	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
+	require.NoError(err)
+
+	// Add files to /bar/ dir
+	sess = NewW3sDriver(ucanKey, ucanProof, "/bar/", pubId).NewSession("").(*W3sSession)
+	rndFile = randFile()
+	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
+	require.NoError(err)
+
+	// Add files to / dir
+	sess = NewW3sDriver(ucanKey, ucanProof, "", pubId).NewSession("").(*W3sSession)
+	rndFile = randFile()
+	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
+	require.NoError(err)
 
 	// TODO
-	url := storage.Publish()
+	url := NewW3sDriver(ucanKey, ucanProof, "/foo/video/hls/", pubId).Publish()
 	fmt.Println(url)
 
 	// TODO: Create CAR for each subdirectory
