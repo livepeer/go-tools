@@ -3,6 +3,15 @@ package drivers
 import (
 	"context"
 	"fmt"
+	bserv "github.com/ipfs/go-blockservice"
+	"github.com/ipfs/go-cid"
+	ds "github.com/ipfs/go-datastore"
+	dssync "github.com/ipfs/go-datastore/sync"
+	blockstore "github.com/ipfs/go-ipfs-blockstore"
+	format "github.com/ipfs/go-ipld-format"
+	"github.com/ipfs/go-merkledag"
+	"github.com/ipfs/go-unixfs"
+	"github.com/ipld/go-car"
 	"io"
 	"os"
 	"os/exec"
@@ -15,9 +24,24 @@ import (
 // This represents the CAR structure, the data is removed after the CAR is uploaded / published.
 // Note that this makes the driver stateful as it stores its state in memory.
 var (
-	carsToPublish map[string]*node
+	cidV1 = merkledag.V1CidPrefix()
+
+	carsToPublish map[string]*carToPublish
 	mu            sync.Mutex
 )
+
+type carToPublish struct {
+	root       *merkledag.ProtoNode
+	dagService format.DAGService
+	carCids    []string
+}
+
+func newCarToPublish() *carToPublish {
+	return &carToPublish{
+		root:       newDagNodeDirectory(),
+		dagService: merkledag.NewDAGService(bserv.New(blockstore.NewBlockstore(dssync.MutexWrap(ds.NewMapDatastore())), nil)),
+	}
+}
 
 type node struct {
 	fileCid  string
@@ -40,7 +64,7 @@ func NewW3sDriver(ucanKey, ucanProof, dirPath, pubId string) *W3sOS {
 	mu.Lock()
 	defer mu.Unlock()
 	if carsToPublish == nil {
-		carsToPublish = make(map[string]*node)
+		carsToPublish = make(map[string]*carToPublish)
 	}
 
 	return &W3sOS{
@@ -140,18 +164,64 @@ func (session *W3sSession) addToPublish(fileName, fileCid, carCid string) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	filePaths := strings.Split(strings.Trim(session.os.dirPath, "/"), "/")
-	filePaths = append(filePaths, fileName)
+	dirPaths := strings.FieldsFunc(session.os.dirPath, func(c rune) bool { return c == '/' })
+	//filePaths := strings.Split(strings.Trim(session.os.dirPath, "/"), "/")
+	//filePaths = append(filePaths, fileName)
 
-	leaf := makeNodes(session.os.getRoot(), filePaths)
-	leaf.fileCid = fileCid
-	leaf.carCid = carCid
+	c := session.os.getCarToPublish()
+	c.root, _ = addFile(c, dirPaths, fileName, fileCid)
+	c.carCids = append(c.carCids, carCid)
 }
 
-func (ostore *W3sOS) getRoot() *node {
+func addFile(c *carToPublish, paths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
+	return addFileToNode(c.root, c, paths, filename, fileCid)
+}
+
+func addFileToNode(n *merkledag.ProtoNode, c *carToPublish, paths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
+	if len(paths) == 0 {
+		fCid, err := cid.Parse(fileCid)
+		if err != nil {
+			return nil, err
+		}
+		n.AddRawLink(filename, &format.Link{Cid: fCid})
+		c.dagService.Add(context.TODO(), n)
+		return n, nil
+	}
+
+	head, tail := paths[0], paths[1:]
+	pn, err := n.GetLinkedProtoNode(context.TODO(), c.dagService, head)
+	if err == merkledag.ErrLinkNotFound {
+		pn = newDagNodeDirectory()
+		n.AddNodeLink(head, pn)
+	} else if err != nil {
+		return nil, err
+	}
+	pn, err = addFileToNode(pn, c, tail, filename, fileCid)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Adding node CID: ", n.Cid())
+	nn, err := n.UpdateNodeLink(head, pn)
+	if err != nil {
+		return nil, err
+	}
+	err = c.dagService.Add(context.TODO(), nn)
+	if err != nil {
+		return nil, err
+	}
+	return nn, nil
+}
+
+func newDagNodeDirectory() *merkledag.ProtoNode {
+	n := unixfs.EmptyDirNode()
+	n.SetCidBuilder(cidV1)
+	return n
+}
+
+func (ostore *W3sOS) getCarToPublish() *carToPublish {
 	pubId := ostore.pubId
 	if _, ok := carsToPublish[pubId]; !ok {
-		carsToPublish[pubId] = newNode()
+		carsToPublish[pubId] = newCarToPublish()
 	}
 	root, _ := carsToPublish[pubId]
 	return root
@@ -214,7 +284,7 @@ func storeCar(carPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(out), nil
+	return strings.TrimSpace(string(out)), nil
 }
 
 func deleteFile(filePath string) {
@@ -234,30 +304,52 @@ func (ostore *W3sOS) Publish() string {
 	mu.Lock()
 	defer mu.Unlock()
 
-	var cidsToUpload []string
-	root := ostore.getRoot()
-	fileCid, carCid, err := createDirCar(root, &cidsToUpload)
+	carFile, _ := os.Create("test.car")
+	defer carFile.Close()
+
+	c := ostore.getCarToPublish()
+
+	car.WriteCar(context.TODO(), c.dagService, []cid.Cid{c.root.Cid()}, carFile)
+
+	fmt.Println("Hello World")
+	storedCid, _ := storeCar("test.car")
+
+	//time.Sleep(1 * time.Second)
+	//uploadCmd := fmt.Sprintf(strings.Join([]string{"w3", "can", "upload", "add", dir.Cid().String(), "bagbaieraryp54uvfvxrpedxmmoms36g2hfanxuimvzk3i4l54ndaylz67voa", storedCid}, " "))
+	//fmt.Println(uploadCmd)
+
+	out, err := exec.Command("w3", "can", "upload", "add", c.root.Cid().String(), storedCid, c.carCids[0]).Output()
 	if err != nil {
-		// TODO: handle error
+		fmt.Println(err)
+		fmt.Println(string(out))
 	}
-	fmt.Printf("w3 upload %s %s cidsToUpload\n", fileCid, carCid)
+	fmt.Println(string(out))
+	fmt.Println("Stored at: ", c.root.Cid().String())
 
-	fmt.Println(cidsToUpload)
-
-	// Store the CAR directory in web3.storage
-	// Currently uploading the whole tmp dir with `w3 up`, but we'll change it constructing the CAR dir structure on our own
-	//prefix, _ := ostore.getPrefixAndPath()
-	//mu.Lock()
-	//tmpDir := carsToPublish[prefix].tmpDir
-	//mu.Unlock()
+	//var cidsToUpload []string
+	//root := ostore.getRoot()
+	//fileCid, carCid, err := createDirCar(root, &cidsToUpload)
+	//if err != nil {
+	//	// TODO: handle error
+	//}
+	//fmt.Printf("w3 upload %s %s cidsToUpload\n", fileCid, carCid)
 	//
-	//fCar := upload(path.Join(tmpDir, prefix))
-	//os.RemoveAll(tmpDir)
-	//mu.Lock()
-	//delete(carsToPublish, prefix)
-	//mu.Unlock()
+	//fmt.Println(cidsToUpload)
 	//
-	//return fCar.url
+	//// Store the CAR directory in web3.storage
+	//// Currently uploading the whole tmp dir with `w3 up`, but we'll change it constructing the CAR dir structure on our own
+	////prefix, _ := ostore.getPrefixAndPath()
+	////mu.Lock()
+	////tmpDir := carsToPublish[prefix].tmpDir
+	////mu.Unlock()
+	////
+	////fCar := upload(path.Join(tmpDir, prefix))
+	////os.RemoveAll(tmpDir)
+	////mu.Lock()
+	////delete(carsToPublish, prefix)
+	////mu.Unlock()
+	////
+	////return fCar.url
 	return ""
 }
 

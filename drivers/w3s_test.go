@@ -33,8 +33,8 @@ func TestW3sOS(t *testing.T) {
 	}
 
 	// Configure Driver
-	//path := "/somepath/video/hls/"
-	path := "/"
+	path := "/somepath/video/hls/"
+	//path := "/"
 	pubId := uuid.New().String()
 	storage := NewW3sDriver(ucanKey, ucanProof, path, pubId)
 	sess := storage.NewSession("").(*W3sSession)
@@ -54,4 +54,5 @@ func TestW3sOS(t *testing.T) {
 	url := storage.Publish()
 	fmt.Println(url)
 
+	// TODO: Create CAR for each subdirectory
 }
