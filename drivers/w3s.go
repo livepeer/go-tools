@@ -347,7 +347,7 @@ func (ostore *W3sOS) Publish() string {
 	////mu.Unlock()
 	////
 	////return fCar.url
-	return ""
+	return fmt.Sprintf("https://%s.ipfs.w3s.link", rootLink.Cid)
 }
 
 func storeDirRecursively(n format.Node, dagService format.DAGService, c *carToPublish, name string) *format.Link {

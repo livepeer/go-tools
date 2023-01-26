@@ -8,22 +8,17 @@ import (
 	"github.com/google/uuid"
 	require2 "github.com/stretchr/testify/require"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"testing"
 )
 
 type testFile struct {
-	name string
-	data io.Reader
-}
-
-func randFile() testFile {
-	name := uuid.New().String() + ".ts"
-	size := int64(1024 * 10)
-	rndData := make([]byte, size)
-	rand.Read(rndData)
-	return testFile{name: name, data: bytes.NewReader(rndData)}
+	dirPath string
+	name    string
+	data    []byte
 }
 
 func TestW3sOS(t *testing.T) {
@@ -47,37 +42,47 @@ func TestW3sOS(t *testing.T) {
 	}
 
 	pubId := uuid.New().String()
+	testFiles := []testFile{
+		{dirPath: "/foo/video/hls/", name: randFilename(), data: randFiledata()},
+		{dirPath: "/bar/video/hls/", name: randFilename(), data: randFiledata()},
+		{dirPath: "/bar/video/hls/", name: randFilename(), data: randFiledata()},
+		{dirPath: "/bar/", name: randFilename(), data: randFiledata()},
+		{dirPath: "", name: randFilename(), data: randFiledata()},
+	}
 
-	// Add files to foo/video/hls dir
-	sess := NewW3sDriver(ucanKey, ucanProof, "/foo/video/hls/", pubId).NewSession("").(*W3sSession)
-	rndFile := randFile()
-	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
-	require.NoError(err)
+	// add a number of files in different locations
+	for _, tf := range testFiles {
+		sess := NewW3sDriver(ucanKey, ucanProof, tf.dirPath, pubId).NewSession("").(*W3sSession)
+		_, err = sess.SaveData(context.TODO(), tf.name, bytes.NewReader(tf.data), nil, 0)
+		require.NoError(err)
+	}
 
-	// Add files to bar/video/hls dir
-	sess = NewW3sDriver(ucanKey, ucanProof, "/bar/video/hls/", pubId).NewSession("").(*W3sSession)
-	rndFile = randFile()
-	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
-	require.NoError(err)
-	rndFile = randFile()
-	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
-	require.NoError(err)
+	// publish the CAR and get the final w3s URL
+	u := NewW3sDriver(ucanKey, ucanProof, "", pubId).Publish()
 
-	// Add files to /bar/ dir
-	sess = NewW3sDriver(ucanKey, ucanProof, "/bar/", pubId).NewSession("").(*W3sSession)
-	rndFile = randFile()
-	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
-	require.NoError(err)
+	// verify the test file data
+	for _, tf := range testFiles {
+		fileUrl, err := url.JoinPath(u, tf.dirPath, tf.name)
+		require.NoError(err)
 
-	// Add files to / dir
-	sess = NewW3sDriver(ucanKey, ucanProof, "", pubId).NewSession("").(*W3sSession)
-	rndFile = randFile()
-	_, err = sess.SaveData(context.TODO(), rndFile.name, rndFile.data, nil, 0)
-	require.NoError(err)
+		resp, err := http.Get(fileUrl)
+		require.NoError(err)
 
-	// TODO
-	url := NewW3sDriver(ucanKey, ucanProof, "/foo/video/hls/", pubId).Publish()
-	fmt.Println(url)
+		d, err := io.ReadAll(resp.Body)
+		require.NoError(err)
+		resp.Body.Close()
 
-	// TODO: Create CAR for each subdirectory
+		require.Equal(tf.data, d)
+	}
+}
+
+func randFilename() string {
+	return uuid.New().String() + ".ts"
+}
+
+func randFiledata() []byte {
+	size := int64(1024 * 10)
+	rndData := make([]byte, size)
+	rand.Read(rndData)
+	return rndData
 }
