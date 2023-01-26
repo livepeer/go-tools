@@ -278,15 +278,6 @@ func deleteFile(filePath string) {
 	os.RemoveAll(filePath)
 }
 
-//func upload(filePath string) fileCar {
-//	// Currently we upload the file with `w3 up`, but we'll probably need to change it to encoding file as CAR and later uploading with `w3 can store add`.
-//	out, _ := exec.Command("w3", "up", filePath).Output()
-//	r := regexp.MustCompile(`http.*`)
-//	matches := r.FindAllString(string(out), -1)
-//	// When we upload the file with `w3 can store add`, then we'll be able to get the file's CID (needed later to comstruct the CAR directory)
-//	return fileCar{url: matches[0]}
-//}
-
 func (ostore *W3sOS) Publish() string {
 	//dataToPublishMu.Lock()
 	//defer dataToPublishMu.Unlock()
