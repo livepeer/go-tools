@@ -130,9 +130,9 @@ func (os *GsOS) NewSession(path string) OSSession {
 	return gs
 }
 
-func (os *GsOS) Publish() string {
+func (os *GsOS) Publish(ctx context.Context) (string, error) {
 	// not supported
-	return ""
+	return "", nil
 }
 
 func newGSSession(info *S3OSInfo) OSSession {

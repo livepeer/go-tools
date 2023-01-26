@@ -58,7 +58,8 @@ func TestW3sOS(t *testing.T) {
 	}
 
 	// publish the CAR and get the final w3s URL
-	u := NewW3sDriver(ucanKey, ucanProof, "", pubId).Publish()
+	u, err := NewW3sDriver(ucanKey, ucanProof, "", pubId).Publish(context.TODO())
+	require.NoError(err)
 
 	// verify the test file data
 	for _, tf := range testFiles {

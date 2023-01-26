@@ -202,9 +202,9 @@ func (ostore *S3OS) UriSchemes() []string {
 	return []string{"s3", "s3+http", "s3+https"}
 }
 
-func (ostore *S3OS) Publish() string {
+func (ostore *S3OS) Publish(ctx context.Context) (string, error) {
 	// not supported
-	return ""
+	return "", nil
 }
 
 func (ostore *S3OS) Description() string {

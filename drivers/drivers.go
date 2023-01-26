@@ -44,7 +44,7 @@ type OSDriver interface {
 	NewSession(path string) OSSession
 	Description() string
 	UriSchemes() []string
-	Publish() string
+	Publish(ctx context.Context) (string, error)
 }
 
 // ErrNoNextPage indicates that there is no next page in ListFiles
