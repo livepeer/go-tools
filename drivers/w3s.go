@@ -291,7 +291,6 @@ func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 		return "", nil
 	}
 
-	fmt.Println("Stored at: ", rootLink.Cid.String())
 	return fmt.Sprintf("https://%s.ipfs.w3s.link", rootLink.Cid), nil
 }
 
