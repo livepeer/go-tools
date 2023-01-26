@@ -25,8 +25,8 @@ var (
 	cidV1 = merkledag.V1CidPrefix()
 
 	// This represents the main CAR directory structure organized by pubId.
-	// Data for each pubId is removed after the whole CAR directory is published.
-	dataToPublish   map[string]*rootCar = make(map[string]*rootCar)
+	// Data for each pubId is removed after the CAR directory is published.
+	dataToPublish   = make(map[string]*rootCar)
 	dataToPublishMu sync.Mutex
 )
 
@@ -37,17 +37,11 @@ type rootCar struct {
 	mu      sync.Mutex
 }
 
-func newCarToPublish() *rootCar {
+func newRootCar() *rootCar {
 	return &rootCar{
 		root: newDir(),
 		dag:  merkledag.NewDAGService(bserv.New(blockstore.NewBlockstore(dssync.MutexWrap(ds.NewMapDatastore())), nil)),
 	}
-}
-
-type node struct {
-	fileCid  string
-	carCid   string
-	children map[string]*node
 }
 
 type W3sOS struct {
@@ -141,7 +135,10 @@ func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Re
 		return "", err
 	}
 
-	session.os.addToPublish(name, fileCid, carCid)
+	rCar := session.os.getRootCar()
+	if err = rCar.addFile(ctx, session.os.dirPath, name, fileCid, carCid); err != nil {
+		return "", err
+	}
 
 	return fileCid, nil
 }
@@ -193,52 +190,70 @@ func storeCar(ctx context.Context, carPath string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func (ostore *W3sOS) addToPublish(fileName, fileCid, carCid string) {
-	// split path by "/", ignore empty strings
-	dirPaths := strings.FieldsFunc(ostore.dirPath, func(c rune) bool { return c == '/' })
+func (rc *rootCar) addFile(ctx context.Context, dirPath, filename, fileCid, carCid string) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
 
-	rCar := ostore.getRootCar()
-	// TODO: Continue here
-	// TODO: Add/fix locks
-	//rCar.mu.Lock()
-	//defer rCar.mu.Unlock()
-	rCar.root, _ = addFileToNode(rCar.root, rCar, dirPaths, fileName, fileCid)
-	rCar.carCids = append(rCar.carCids, carCid)
+	rc.carCids = append(rc.carCids, carCid)
+
+	// split path by "/", ignore empty strings
+	dirPaths := strings.FieldsFunc(dirPath, func(c rune) bool { return c == '/' })
+
+	// Add file into dag
+	newRoot, err := rc.addFileToNode(ctx, rc.root, dirPaths, filename, fileCid)
+	if err != nil {
+		return err
+	}
+	rc.root = newRoot
+	return nil
 }
 
-func addFileToNode(n *merkledag.ProtoNode, c *rootCar, paths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
-	if len(paths) == 0 {
+func (rc *rootCar) addFileToNode(ctx context.Context, n *merkledag.ProtoNode, dirPaths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
+	if len(dirPaths) == 0 {
+		// n is already a leaf
 		fCid, err := cid.Parse(fileCid)
 		if err != nil {
 			return nil, err
 		}
 		n.AddRawLink(filename, &format.Link{Cid: fCid})
-		c.dag.Add(context.TODO(), n)
+		rc.dag.Add(ctx, n)
 		return n, nil
 	}
 
-	head, tail := paths[0], paths[1:]
-	pn, err := n.GetLinkedProtoNode(context.TODO(), c.dag, head)
+	// n is not yet a leaf, recursively updating the leaf
+	head, tail := dirPaths[0], dirPaths[1:]
+	child, err := rc.getOrCreateChild(ctx, n, head)
+	if err != nil {
+		return nil, err
+	}
+	child, err = rc.addFileToNode(ctx, child, tail, filename, fileCid)
+	if err != nil {
+		return nil, err
+	}
+
+	// CIDs of n and child has changes, update links and dag
+	newN, err := n.UpdateNodeLink(head, child)
+	if err != nil {
+		return nil, err
+	}
+	if err = rc.dag.Remove(ctx, n.Cid()); err != nil {
+		return nil, err
+	}
+	if err = rc.dag.Add(ctx, newN); err != nil {
+		return nil, err
+	}
+	return newN, nil
+}
+
+func (rc *rootCar) getOrCreateChild(ctx context.Context, n *merkledag.ProtoNode, linkName string) (*merkledag.ProtoNode, error) {
+	child, err := n.GetLinkedProtoNode(ctx, rc.dag, linkName)
 	if err == merkledag.ErrLinkNotFound {
-		pn = newDir()
-		n.AddNodeLink(head, pn)
+		child = newDir()
+		n.AddNodeLink(linkName, child)
 	} else if err != nil {
 		return nil, err
 	}
-	pn, err = addFileToNode(pn, c, tail, filename, fileCid)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Adding node CID: ", n.Cid())
-	nn, err := n.UpdateNodeLink(head, pn)
-	if err != nil {
-		return nil, err
-	}
-	err = c.dag.Add(context.TODO(), nn)
-	if err != nil {
-		return nil, err
-	}
-	return nn, nil
+	return child, nil
 }
 
 func newDir() *merkledag.ProtoNode {
@@ -252,26 +267,9 @@ func (ostore *W3sOS) getRootCar() *rootCar {
 	dataToPublishMu.Unlock()
 
 	if _, ok := dataToPublish[ostore.pubId]; !ok {
-		dataToPublish[ostore.pubId] = newCarToPublish()
+		dataToPublish[ostore.pubId] = newRootCar()
 	}
 	return dataToPublish[ostore.pubId]
-}
-
-func makeNodes(n *node, paths []string) *node {
-	cn := n
-	for _, p := range paths {
-		if p != "" {
-			if _, ok := cn.children[p]; !ok {
-				cn.children[p] = newNode()
-			}
-			cn = cn.children[p]
-		}
-	}
-	return cn
-}
-
-func newNode() *node {
-	return &node{children: make(map[string]*node)}
 }
 
 func deleteFile(filePath string) {
