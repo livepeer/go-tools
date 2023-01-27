@@ -9,7 +9,6 @@ import (
 	require2 "github.com/stretchr/testify/require"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"testing"
@@ -63,14 +62,14 @@ func TestW3sOS(t *testing.T) {
 
 	// verify the test file data
 	for _, tf := range testFiles {
-		fileUrl, err := url.JoinPath(u, tf.dirPath, tf.name)
+		fileUrl := fmt.Sprintf("%s/%s/%s", u, tf.dirPath, tf.name)
 		require.NoError(err)
 
-		resp, err := http.Get(fileUrl)
-		require.NoError(err)
+		resp, err2 := http.Get(fileUrl)
+		require.NoError(err2)
 
-		d, err := io.ReadAll(resp.Body)
-		require.NoError(err)
+		d, err3 := io.ReadAll(resp.Body)
+		require.NoError(err3)
 		resp.Body.Close()
 
 		require.Equal(tf.data, d)
