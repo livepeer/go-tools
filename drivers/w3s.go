@@ -23,11 +23,11 @@ import (
 
 const w3SDefaultSaveTimeout = 2 * time.Minute
 
-var (
-	cidV1 = merkledag.V1CidPrefix()
+var cidV1 = merkledag.V1CidPrefix()
 
-	// This represents the main CAR directory structure organized by pubId.
-	// Data for each pubId is removed after the CAR directory is published.
+// This represents the main CAR directory structure organized by pubId.
+// Data for each pubId is removed after the CAR directory is published.
+var (
 	dataToPublish   = make(map[string]*rootCar)
 	dataToPublishMu sync.Mutex
 )
@@ -151,21 +151,6 @@ func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Re
 	return fileCid, nil
 }
 
-func toFile(data io.Reader) (string, error) {
-	fRaw, err := os.CreateTemp("", "w3s-raw")
-	if err != nil {
-		return "", err
-	}
-
-	if _, err = io.Copy(fRaw, data); err != nil {
-		deleteFile(fRaw.Name())
-		return "", err
-	}
-
-	defer fRaw.Close()
-	return fRaw.Name(), nil
-}
-
 func (rc *rootCar) addFile(ctx context.Context, dirPath, filename, fileCid, carCid string) error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
@@ -175,18 +160,18 @@ func (rc *rootCar) addFile(ctx context.Context, dirPath, filename, fileCid, carC
 	// split path by "/", ignore empty strings
 	dirPaths := strings.FieldsFunc(dirPath, func(c rune) bool { return c == '/' })
 
-	// Add file into dag
-	newRoot, err := rc.addFileToNode(ctx, rc.root, dirPaths, filename, fileCid)
+	newRoot, err := rc.addFileToDag(ctx, rc.root, dirPaths, filename, fileCid)
 	if err != nil {
 		return err
 	}
 	rc.root = newRoot
+
 	return nil
 }
 
-func (rc *rootCar) addFileToNode(ctx context.Context, n *merkledag.ProtoNode, dirPaths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
+func (rc *rootCar) addFileToDag(ctx context.Context, n *merkledag.ProtoNode, dirPaths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
 	if len(dirPaths) == 0 {
-		// n is already a leaf
+		// n is a leaf
 		fCid, err := cid.Parse(fileCid)
 		if err != nil {
 			return nil, err
@@ -196,18 +181,18 @@ func (rc *rootCar) addFileToNode(ctx context.Context, n *merkledag.ProtoNode, di
 		return n, nil
 	}
 
-	// n is not yet a leaf, recursively updating the leaf
+	// n is not a leaf, recursively updating until the leaf
 	head, tail := dirPaths[0], dirPaths[1:]
 	child, err := rc.getOrCreateChild(ctx, n, head)
 	if err != nil {
 		return nil, err
 	}
-	child, err = rc.addFileToNode(ctx, child, tail, filename, fileCid)
+	child, err = rc.addFileToDag(ctx, child, tail, filename, fileCid)
 	if err != nil {
 		return nil, err
 	}
 
-	// CIDs of n and child has changes, update links and dag
+	// CIDs of n and child have changed, update links and dag
 	newN, err := n.UpdateNodeLink(head, child)
 	if err != nil {
 		return nil, err
@@ -218,6 +203,7 @@ func (rc *rootCar) addFileToNode(ctx context.Context, n *merkledag.ProtoNode, di
 	if err = rc.dag.Add(ctx, newN); err != nil {
 		return nil, err
 	}
+
 	return newN, nil
 }
 
@@ -230,33 +216,6 @@ func (rc *rootCar) getOrCreateChild(ctx context.Context, n *merkledag.ProtoNode,
 		return nil, err
 	}
 	return child, nil
-}
-
-func newDir() *merkledag.ProtoNode {
-	n := unixfs.EmptyDirNode()
-	n.SetCidBuilder(cidV1)
-	return n
-}
-
-func (ostore *W3sOS) getRootCar() *rootCar {
-	dataToPublishMu.Lock()
-	defer dataToPublishMu.Unlock()
-
-	if _, ok := dataToPublish[ostore.pubId]; !ok {
-		dataToPublish[ostore.pubId] = newRootCar()
-	}
-	return dataToPublish[ostore.pubId]
-}
-
-func (ostore *W3sOS) deleteRootCar() {
-	dataToPublishMu.Lock()
-	defer dataToPublishMu.Unlock()
-
-	delete(dataToPublish, ostore.pubId)
-}
-
-func deleteFile(filePath string) {
-	os.RemoveAll(filePath)
 }
 
 func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
@@ -280,8 +239,8 @@ func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 
 func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string) (*format.Link, error) {
 	// Technically it should be enough to store one CAR with the whole directory dag,
-	// however car.WriteCar() fails when some links are directories and some are pure CIDs without data.
-	// That is why we need to create a separate CAR for each directory in the dag.
+	// but car.WriteCar() fails when some links are directories and some are raw CIDs without data.
+	// That is why we need to create a separate CAR for each directory in the dag, store them and use link with raw CIDs only.
 	var nonDirLinks []*format.Link
 	for _, l := range n.Links() {
 		child, err := l.GetNode(ctx, rc.dag)
@@ -289,7 +248,7 @@ func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string)
 			// link to a file
 			nonDirLinks = append(nonDirLinks, l)
 		} else {
-			// link to a directory, recursively convert store dir CAR and update the link
+			// link to a directory, recursively store dir CAR and update the link to raw CID
 			newLink, err := rc.storeDir(ctx, child, l.Name)
 			if err != nil {
 				return nil, err
@@ -298,7 +257,7 @@ func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string)
 		}
 	}
 
-	// rewrite new links, which now contains only CIDs
+	// rewrite new links, which now contains only raw CIDs
 	newN := newDir()
 	if err := newN.SetLinks(nonDirLinks); err != nil {
 		return nil, err
@@ -310,13 +269,13 @@ func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string)
 		return nil, err
 	}
 
-	// Create directory CAR
+	// create directory CAR
 	carFile, err := os.CreateTemp("", "car")
 	if err != nil {
 		return nil, err
 	}
 	defer deleteFile(carFile.Name())
-	// Ignore any errors returned from car.WriteCar(), because it reports errors for links without data
+	// ignore any errors returned from car.WriteCar(), because it reports errors for raw links without data
 	car.WriteCar(ctx, rc.dag, []cid.Cid{newN.Cid()}, carFile)
 	carFile.Close()
 
@@ -329,6 +288,49 @@ func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string)
 	return &format.Link{Name: linkName, Cid: newN.Cid()}, nil
 }
 
+func (ostore *W3sOS) getRootCar() *rootCar {
+	dataToPublishMu.Lock()
+	defer dataToPublishMu.Unlock()
+
+	if _, ok := dataToPublish[ostore.pubId]; !ok {
+		dataToPublish[ostore.pubId] = newRootCar()
+	}
+	return dataToPublish[ostore.pubId]
+}
+
+func (ostore *W3sOS) deleteRootCar() {
+	dataToPublishMu.Lock()
+	defer dataToPublishMu.Unlock()
+
+	delete(dataToPublish, ostore.pubId)
+}
+
+func newDir() *merkledag.ProtoNode {
+	n := unixfs.EmptyDirNode()
+	n.SetCidBuilder(cidV1)
+	return n
+}
+
+func toFile(data io.Reader) (string, error) {
+	fRaw, err := os.CreateTemp("", "w3s-raw")
+	if err != nil {
+		return "", err
+	}
+
+	if _, err = io.Copy(fRaw, data); err != nil {
+		deleteFile(fRaw.Name())
+		return "", err
+	}
+
+	defer fRaw.Close()
+	return fRaw.Name(), nil
+}
+
+func deleteFile(filePath string) {
+	os.RemoveAll(filePath)
+}
+
+// ipfsCarPack uses external binary 'ipfs-car' to convert a file into a CAR.
 func ipfsCarPack(ctx context.Context, filePath string) (string, string, error) {
 	fCar, err := os.CreateTemp("", "w3s-car")
 	if err != nil {
@@ -353,6 +355,7 @@ func ipfsCarPack(ctx context.Context, filePath string) (string, string, error) {
 	return fCar.Name(), fileCid, nil
 }
 
+// w3StoreCar uses external binary `w3` to store a CAR file in web3.storage
 func w3StoreCar(ctx context.Context, carPath string) (string, error) {
 	out, err := exec.CommandContext(ctx, "w3", "can", "store", "add", carPath).Output()
 	if err != nil {
@@ -361,6 +364,7 @@ func w3StoreCar(ctx context.Context, carPath string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// w3StoreCar uses external binary `w3` to publish bind and publish a number of CARs.
 func w3UploadCar(ctx context.Context, rootCid string, carCids []string) error {
 	args := []string{"can", "upload", "add"}
 	args = append(args, rootCid)
