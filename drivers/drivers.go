@@ -13,7 +13,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -69,6 +68,7 @@ var AvailableDrivers = []OSDriver{
 	&IpfsOS{},
 	&MemoryOS{},
 	&S3OS{},
+	&W3sOS{},
 }
 
 type PageInfo interface {
@@ -269,13 +269,25 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 		u.Scheme = ""
 		return NewFSDriver(u), nil
 	}
-	if u.Scheme == "w3" {
-		ucanKey := u.User.Username()
-		ucanProof, _ := u.User.Password()
-		splitPath := strings.Split(u.Path, "/")
-		pubId := splitPath[1]
-		filePath := path.Join(splitPath[2:]...)
-		return NewW3sDriver(ucanKey, ucanProof, pubId, filePath), nil
+	if u.Scheme == "w3s" {
+		// W3S URL format: 'w3s://key:proof@pubId/path'
+		// Key and proof are base64-encoded and url-escaped
+		// pubId must be a unique value used until Publish() is called
+		ucanKey, err := url.PathUnescape(u.User.Username())
+		if err != nil {
+			return nil, errors.New("w3s private key not found or in wrong format")
+		}
+		ucanProofEscaped, ok := u.User.Password()
+		if !ok {
+			return nil, errors.New("w3s proof not found")
+		}
+		ucanProof, err := url.PathUnescape(ucanProofEscaped)
+		if err != nil {
+			return nil, errors.New("w3 proof in wrong format")
+		}
+		pubId := u.Hostname()
+		filePath := u.Path
+		return NewW3sDriver(ucanKey, ucanProof, filePath, pubId), nil
 	}
 	return nil, fmt.Errorf("unrecognized OS scheme: %s", u.Scheme)
 }
