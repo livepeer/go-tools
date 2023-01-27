@@ -75,9 +75,6 @@ func TestW3sOS(t *testing.T) {
 
 		require.Equal(tf.data, d)
 	}
-
-	// TODO: Context and timeouts
-	// TODO: unit test?
 }
 
 func randFilename() string {
