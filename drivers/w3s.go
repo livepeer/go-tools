@@ -181,7 +181,7 @@ func (rc *rootCar) addFileToDag(ctx context.Context, n *merkledag.ProtoNode, dir
 		return n, nil
 	}
 
-	// n is not a leaf, recursively updating until the leaf
+	// n is not a leaf, recursively update until the leaf
 	head, tail := dirPaths[0], dirPaths[1:]
 	child, err := rc.getOrCreateChild(ctx, n, head)
 	if err != nil {
@@ -240,7 +240,7 @@ func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string) (*format.Link, error) {
 	// Technically it should be enough to store one CAR with the whole directory dag,
 	// but car.WriteCar() fails when some links are directories and some are raw CIDs without data.
-	// That is why we need to create a separate CAR for each directory in the dag, store them and use link with raw CIDs only.
+	// That is why we need to create a separate CAR for each directory in the dag, store them and use links with raw CIDs only.
 	var nonDirLinks []*format.Link
 	for _, l := range n.Links() {
 		child, err := l.GetNode(ctx, rc.dag)
@@ -355,7 +355,7 @@ func ipfsCarPack(ctx context.Context, filePath string) (string, string, error) {
 	return fCar.Name(), fileCid, nil
 }
 
-// w3StoreCar uses external binary `w3` to store a CAR file in web3.storage
+// w3StoreCar uses external binary `w3` to store a CAR file in web3.storage.
 func w3StoreCar(ctx context.Context, carPath string) (string, error) {
 	out, err := exec.CommandContext(ctx, "w3", "can", "store", "add", carPath).Output()
 	if err != nil {
@@ -364,7 +364,7 @@ func w3StoreCar(ctx context.Context, carPath string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// w3StoreCar uses external binary `w3` to publish bind and publish a number of CARs.
+// w3StoreCar uses external binary `w3` to bind and publish multiple CARs.
 func w3UploadCar(ctx context.Context, rootCid string, carCids []string) error {
 	args := []string{"can", "upload", "add"}
 	args = append(args, rootCid)

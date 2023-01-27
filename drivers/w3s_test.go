@@ -57,7 +57,7 @@ func TestW3sOS(t *testing.T) {
 		require.NoError(err)
 	}
 
-	// publish the CAR and get the final w3s URL
+	// publish the CAR and get the w3s URL
 	u, err := NewW3sDriver(ucanKey, ucanProof, "", pubId).Publish(context.TODO())
 	require.NoError(err)
 
