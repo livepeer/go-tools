@@ -21,6 +21,8 @@ import (
 	"time"
 )
 
+const w3SDefaultSaveTimeout = 2 * time.Minute
+
 var (
 	cidV1 = merkledag.V1CidPrefix()
 
@@ -118,6 +120,12 @@ func (session *W3sSession) getAbsolutePath(name string) string {
 }
 
 func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+	if timeout == 0 {
+		timeout = w3SDefaultSaveTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	filePath, err := toFile(data)
 	if err != nil {
 		return "", err

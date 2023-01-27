@@ -77,9 +77,7 @@ func TestW3sOS(t *testing.T) {
 	}
 
 	// TODO: Context and timeouts
-
 	// TODO: unit test?
-
 }
 
 func randFilename() string {
