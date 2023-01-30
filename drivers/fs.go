@@ -68,8 +68,7 @@ func (ostore *FSOS) Description() string {
 }
 
 func (ostore *FSOS) Publish(ctx context.Context) (string, error) {
-	// not supported
-	return "", nil
+	return "", ErrNotSupported
 }
 
 func (ostore *FSSession) OS() OSDriver {

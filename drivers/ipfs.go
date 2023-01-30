@@ -57,8 +57,7 @@ func (ostore *IpfsOS) Description() string {
 }
 
 func (ostore *IpfsOS) Publish(ctx context.Context) (string, error) {
-	// not supported
-	return "", nil
+	return "", ErrNotSupported
 }
 
 func (session *IpfsSession) OS() OSDriver {

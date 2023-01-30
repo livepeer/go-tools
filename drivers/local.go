@@ -55,8 +55,7 @@ func (ostore *MemoryOS) NewSession(path string) OSSession {
 }
 
 func (ostore *MemoryOS) Publish(ctx context.Context) (string, error) {
-	// not supported
-	return "", nil
+	return "", ErrNotSupported
 }
 
 func (ostore *MemoryOS) GetSession(path string) *MemorySession {

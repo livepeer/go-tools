@@ -203,8 +203,7 @@ func (ostore *S3OS) UriSchemes() []string {
 }
 
 func (ostore *S3OS) Publish(ctx context.Context) (string, error) {
-	// not supported
-	return "", nil
+	return "", ErrNotSupported
 }
 
 func (ostore *S3OS) Description() string {

@@ -68,7 +68,7 @@ func NewW3sDriver(ucanKey, ucanProof, dirPath, pubId string) *W3sOS {
 
 func (ostore *W3sOS) NewSession(filename string) OSSession {
 	if filename != "" {
-		panic("File names are not supported by W3S driver")
+		return nil
 	}
 	session := &W3sSession{
 		os: ostore,
@@ -93,13 +93,11 @@ func (session *W3sSession) EndSession() {
 }
 
 func (session *W3sSession) ListFiles(ctx context.Context, cid, delim string) (PageInfo, error) {
-	// not supported
-	return nil, nil
+	return nil, ErrNotSupported
 }
 
 func (session *W3sSession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
-	// not supported
-	return nil, nil
+	return nil, ErrNotSupported
 }
 
 func (session *W3sSession) IsExternal() bool {

@@ -49,6 +49,9 @@ type OSDriver interface {
 // ErrNoNextPage indicates that there is no next page in ListFiles
 var ErrNoNextPage = fmt.Errorf("no next page")
 
+// ErrNotSupported indicated that the functionality is not supported by the given driver
+var ErrNotSupported = fmt.Errorf("not supported")
+
 type FileInfo struct {
 	Name         string
 	ETag         string
