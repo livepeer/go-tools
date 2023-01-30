@@ -220,72 +220,39 @@ func (rc *rootCar) getOrCreateChild(ctx context.Context, n *merkledag.ProtoNode,
 
 func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 	rCar := ostore.getRootCar()
+	rootCid := rCar.root.Cid().String()
 	defer ostore.deleteRootCar()
 
 	rCar.mu.Lock()
-	rootLink, err := rCar.storeDir(ctx, rCar.root, "")
-	if err != nil {
-		return "", nil
+	if err := rCar.storeDir(ctx); err != nil {
+		return "", err
 	}
 	carCids := rCar.carCids
 	rCar.mu.Unlock()
 
-	if err := w3UploadCar(ctx, rootLink.Cid.String(), carCids); err != nil {
-		return "", nil
+	if err := w3UploadCar(ctx, rootCid, carCids); err != nil {
+		return "", err
 	}
 
-	return fmt.Sprintf("https://%s.ipfs.w3s.link", rootLink.Cid), nil
+	return fmt.Sprintf("https://%s.ipfs.w3s.link", rootCid), nil
 }
 
-func (rc *rootCar) storeDir(ctx context.Context, n format.Node, linkName string) (*format.Link, error) {
-	// Technically it should be enough to store one CAR with the whole directory dag,
-	// but car.WriteCar() fails when some links are directories and some are raw CIDs without data.
-	// That is why we need to create a separate CAR for each directory in the dag, store them and use links with raw CIDs only.
-	var nonDirLinks []*format.Link
-	for _, l := range n.Links() {
-		child, err := l.GetNode(ctx, rc.dag)
-		if err != nil {
-			// link to a file
-			nonDirLinks = append(nonDirLinks, l)
-		} else {
-			// link to a directory, recursively store dir CAR and update the link to raw CID
-			newLink, err := rc.storeDir(ctx, child, l.Name)
-			if err != nil {
-				return nil, err
-			}
-			nonDirLinks = append(nonDirLinks, newLink)
-		}
-	}
-
-	// rewrite new links, which now contains only raw CIDs
-	newN := newDir()
-	if err := newN.SetLinks(nonDirLinks); err != nil {
-		return nil, err
-	}
-	if err := rc.dag.Remove(ctx, n.Cid()); err != nil {
-		return nil, err
-	}
-	if err := rc.dag.Add(ctx, newN); err != nil {
-		return nil, err
-	}
-
-	// create directory CAR
+func (rc *rootCar) storeDir(ctx context.Context) error {
 	carFile, err := os.CreateTemp("", "car")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer deleteFile(carFile.Name())
-	// ignore any errors returned from car.WriteCar(), because it reports errors for raw links without data
-	car.WriteCar(ctx, rc.dag, []cid.Cid{newN.Cid()}, carFile)
+	car.WriteCar(ctx, rc.dag, []cid.Cid{rc.root.Cid()}, carFile, merkledag.IgnoreMissing())
 	carFile.Close()
 
 	storedCid, err := w3StoreCar(ctx, carFile.Name())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rc.carCids = append(rc.carCids, storedCid)
 
-	return &format.Link{Name: linkName, Cid: newN.Cid()}, nil
+	return nil
 }
 
 func (ostore *W3sOS) getRootCar() *rootCar {
