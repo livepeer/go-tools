@@ -118,7 +118,7 @@ func (session *W3sSession) getAbsolutePath(name string) string {
 }
 
 func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
-	if timeout == 0 {
+	if timeout <= 0 {
 		timeout = w3SDefaultSaveTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
