@@ -105,7 +105,8 @@ func (session *W3sSession) IsExternal() bool {
 }
 
 func (session *W3sSession) IsOwn(url string) bool {
-	return true
+	// not used anywhere
+	return false
 }
 
 func (session *W3sSession) GetInfo() *OSInfo {
