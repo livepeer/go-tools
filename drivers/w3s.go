@@ -181,7 +181,7 @@ func (rc *rootCar) addFileToDag(ctx context.Context, n *merkledag.ProtoNode, dir
 	}
 
 	// n is not a leaf, recursively update until the leaf
-	head, tail := dirPaths[0], dirPaths[1:]
+	rootPath, childPaths := dirPaths[0], dirPaths[1:]
 	child, err := rc.getOrCreateChild(ctx, n, head)
 	if err != nil {
 		return nil, err
