@@ -24,7 +24,7 @@ import (
 const w3SDefaultSaveTimeout = 5 * time.Minute
 
 // web3.storage base64url-encoded UCAN Private Key
-var w3sUcanKey = ""
+var W3sUcanKey = ""
 
 var cidV1 = merkledag.V1CidPrefix()
 
