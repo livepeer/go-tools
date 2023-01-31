@@ -23,9 +23,9 @@ type testFile struct {
 func TestW3sOS(t *testing.T) {
 	require := require2.New(t)
 
-	ucanKey := os.Getenv("W3S_UCAN_KEY")
-	ucanProof := os.Getenv("W3S_UCAN_PROOF")
-	if ucanKey == "" || ucanProof == "" {
+	w3sUcanKey = os.Getenv("W3S_UCAN_KEY")
+	w3sUcanProof := os.Getenv("W3S_UCAN_PROOF")
+	if w3sUcanKey == "" || w3sUcanProof == "" {
 		fmt.Println("No w3s credentials, test skipped")
 		return
 	}
@@ -51,13 +51,13 @@ func TestW3sOS(t *testing.T) {
 
 	// add a number of files in different locations
 	for _, tf := range testFiles {
-		sess := NewW3sDriver(ucanKey, ucanProof, tf.dirPath, pubId).NewSession("").(*W3sSession)
+		sess := NewW3sDriver(w3sUcanProof, tf.dirPath, pubId).NewSession("").(*W3sSession)
 		_, err = sess.SaveData(context.TODO(), tf.name, bytes.NewReader(tf.data), nil, 0)
 		require.NoError(err)
 	}
 
 	// publish the CAR and get the w3s URL
-	u, err := NewW3sDriver(ucanKey, ucanProof, "", pubId).Publish(context.TODO())
+	u, err := NewW3sDriver(w3sUcanProof, "", pubId).Publish(context.TODO())
 	require.NoError(err)
 
 	// verify the test file data

@@ -138,19 +138,17 @@ func TestW3sURL(t *testing.T) {
 	assert := assert.New(t)
 
 	// given
-	key := "KnUYwQGz5aRF3u4be98eJRm2Ll5Z8B0-irS3aQaX2GY"
 	pubId := "abcdef12345"
 	proof := "EaJlcm9vdHOAZ3ZlcnNpb24BmgIBcRIguVaNefyQMACKNgi3XA46t5ijCH19S_ndLpkGhZ0kWiOnYXNYRO2hA0CVYBCNOU9IW-u-IUqhZ9gSHPzFMB7tzLYBE0tjOUrg11K3p3bC31kprHJ769ISMQSJDMRvWCGamwks2rsWJA4GYXZlMC45LjFjYXR0gaJjY2FuYSpkd2l0aHg4ZGlkOmtleTp6Nk1rdGdRNGZHOWNFTTdVY3dOTUhuRUJ0a1ZXYmQ2QUJLRFh3VTFKMlpvdVpodnBjYXVkWCLtAeoGmhaC2aAQPNKXr4AK7MOo8OR_9RkLNIZ6_SgZUq2_Y2V4cPZjaXNzWCLtAdNhO-TS5YOYwp4wQuxsFq9Hi2uBoldfmfxUxf3HWuhRY3ByZoDoAgFxEiAdz1OG9whG7Z5aT42jkEMcBiczAba5WgpZ5NO6okLTKKhhc1hE7aEDQJqxaum4RfYm8EF9W2G2SSoI6rI58lC6buIUoSZaThMs0JA3blC7PPrTgL06AqWOaaAnQKN4b9TuBezi3llLnQhhdmUwLjkuMWNhdHSBomNjYW5hKmR3aXRoeDhkaWQ6a2V5Ono2TWt0Z1E0Zkc5Y0VNN1Vjd05NSG5FQnRrVldiZDZBQktEWHdVMUoyWm91Wmh2cGNhdWRYIu0BYFbRZFVNOcB-ZhrKuhujUFU3l9oaQa68-YMRNtYtqDpjZXhw9mNmY3SBoWVzcGFjZaJkbmFtZWR0ZXN0bGlzUmVnaXN0ZXJlZPVjaXNzWCLtAeoGmhaC2aAQPNKXr4AK7MOo8OR_9RkLNIZ6_SgZUq2_Y3ByZoHYKlglAAFxEiC5Vo15_JAwAIo2CLdcDjq3mKMIfX1L-d0umQaFnSRaIw"
 	path := "/video/hls"
 
 	// when
-	os, err := ParseOSURL(fmt.Sprintf("w3s://%s:%s@%s%s", key, proof, pubId, path), false)
+	os, err := ParseOSURL(fmt.Sprintf("w3s://%s@%s%s", proof, pubId, path), false)
 
 	// then
 	assert.Equal(nil, err)
 	w3s, isW3s := os.(*W3sOS)
 	assert.Equal(true, isW3s)
-	assert.Equal(key, w3s.ucanKey)
 	assert.Equal(proof, w3s.ucanProof)
 	assert.Equal(pubId, w3s.pubId)
 	assert.Equal(path, w3s.dirPath)

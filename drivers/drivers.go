@@ -273,20 +273,13 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 		return NewFSDriver(u), nil
 	}
 	if u.Scheme == "w3s" {
-		// W3S URL format: 'w3s://key:proof@pubId/path'
-		// Key and proof are base64url-encoded
+		// W3S URL format: 'w3s://proof@pubId/path'
+		// Proof is base64url-encoded
 		// pubId must be a unique value used until Publish() is called
-		ucanKey := u.User.Username()
-		if err != nil {
-			return nil, errors.New("w3s private key not found or in wrong format")
-		}
-		ucanProof, ok := u.User.Password()
-		if !ok {
-			return nil, errors.New("w3s proof not found")
-		}
+		w3sUcanProof := u.User.Username()
 		pubId := u.Hostname()
 		filePath := u.Path
-		return NewW3sDriver(ucanKey, ucanProof, filePath, pubId), nil
+		return NewW3sDriver(w3sUcanProof, filePath, pubId), nil
 	}
 	return nil, fmt.Errorf("unrecognized OS scheme: %s", u.Scheme)
 }

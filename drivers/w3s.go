@@ -23,6 +23,9 @@ import (
 
 const w3SDefaultSaveTimeout = 5 * time.Minute
 
+// web3.storage base64url-encoded UCAN Private Key
+var w3sUcanKey = ""
+
 var cidV1 = merkledag.V1CidPrefix()
 
 // This represents the main CAR directory structure organized by pubId.
@@ -47,7 +50,6 @@ func newRootCar() *rootCar {
 }
 
 type W3sOS struct {
-	ucanKey   string
 	ucanProof string
 	dirPath   string
 	pubId     string
@@ -57,9 +59,8 @@ type W3sSession struct {
 	os *W3sOS
 }
 
-func NewW3sDriver(ucanKey, ucanProof, dirPath, pubId string) *W3sOS {
+func NewW3sDriver(ucanProof, dirPath, pubId string) *W3sOS {
 	return &W3sOS{
-		ucanKey:   ucanKey,
 		ucanProof: ucanProof,
 		dirPath:   dirPath,
 		pubId:     pubId,
@@ -182,17 +183,17 @@ func (rc *rootCar) addFileToDag(ctx context.Context, n *merkledag.ProtoNode, dir
 
 	// n is not a leaf, recursively update until the leaf
 	rootPath, childPaths := dirPaths[0], dirPaths[1:]
-	child, err := rc.getOrCreateChild(ctx, n, head)
+	child, err := rc.getOrCreateChild(ctx, n, rootPath)
 	if err != nil {
 		return nil, err
 	}
-	child, err = rc.addFileToDag(ctx, child, tail, filename, fileCid)
+	child, err = rc.addFileToDag(ctx, child, childPaths, filename, fileCid)
 	if err != nil {
 		return nil, err
 	}
 
 	// CIDs of n and child have changed, update links and dag
-	newN, err := n.UpdateNodeLink(head, child)
+	newN, err := n.UpdateNodeLink(rootPath, child)
 	if err != nil {
 		return nil, err
 	}
