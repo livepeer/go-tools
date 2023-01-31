@@ -2,12 +2,14 @@ package drivers
 
 import (
 	"context"
-	"github.com/livepeer/go-tools/clients"
+	"errors"
 	"io"
 	"net/http"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/livepeer/go-tools/clients"
 )
 
 type IpfsOS struct {
@@ -105,6 +107,10 @@ func (session *IpfsSession) IsOwn(url string) bool {
 
 func (session *IpfsSession) GetInfo() *OSInfo {
 	return nil
+}
+
+func (ostore *IpfsSession) DeleteFile(ctx context.Context, name string) error {
+	return errors.New("unsupported method: cannot delete files from IPFS")
 }
 
 func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {

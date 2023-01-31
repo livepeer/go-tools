@@ -131,6 +131,9 @@ type OSSession interface {
 	// ListFiles return list of files
 	ListFiles(ctx context.Context, prefix, delim string) (PageInfo, error)
 
+	// DeleteFile deletes a single file. 'name' should be the full path + filename
+	DeleteFile(ctx context.Context, name string) error
+
 	ReadData(ctx context.Context, name string) (*FileInfoReader, error)
 }
 

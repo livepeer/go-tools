@@ -121,6 +121,10 @@ func (ostore *FSSession) ListFiles(ctx context.Context, dir, delim string) (Page
 	return pi, nil
 }
 
+func (ostore *FSSession) DeleteFile(ctx context.Context, name string) error {
+	return os.Remove(name)
+}
+
 func (ostore *FSSession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
 	prefix := ""
 	if ostore.os.baseURI != nil {

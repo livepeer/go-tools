@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"github.com/stretchr/testify/assert"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func readFile(session *FSSession, name string) []byte {
@@ -65,4 +68,26 @@ func TestFsOS(t *testing.T) {
 	assert.Equal(0, len(files.Files()))
 	assert.Equal(1, len(files.Directories()))
 	assert.Equal("name1", files.Directories()[0])
+}
+
+func TestDeleteFile(t *testing.T) {
+	file, err := ioutil.TempFile(os.TempDir(), "TestDeleteFileefix")
+	require.NoError(t, err)
+
+	// Defer a removal of the file so that we don't litter the filesystem when this test fails
+	defer os.Remove(file.Name())
+
+	// Confirm that the file exists
+	_, err = os.Stat(file.Name())
+	require.NoError(t, err)
+
+	// Try to delete the file
+	u, err := url.Parse(os.TempDir())
+	require.NoError(t, err)
+	sess := NewFSDriver(u).NewSession("driver-TestDeleteFile")
+	require.NoError(t, sess.DeleteFile(context.Background(), file.Name()))
+
+	// Check the file no longer exists
+	_, err = os.Stat(file.Name())
+	require.ErrorContains(t, err, "no such file or directory")
 }

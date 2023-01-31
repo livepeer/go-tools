@@ -81,6 +81,10 @@ func (ostore *MemorySession) EndSession() {
 	ostore.os.lock.Unlock()
 }
 
+func (ostore *MemorySession) DeleteFile(ctx context.Context, name string) error {
+	return errors.New("unsupported method: cannot delete files from in-memory session")
+}
+
 func (ostore *MemorySession) ListFiles(ctx context.Context, prefix, delim string) (PageInfo, error) {
 	pi := &singlePageInfo{}
 	if prefix == "" {

@@ -156,7 +156,7 @@ func (os *gsSession) createClient() error {
 	return nil
 }
 
-func (os *gsSession) Delete(ctx context.Context, name string) error {
+func (os *gsSession) DeleteFile(ctx context.Context, name string) error {
 	if !os.useFullAPI {
 		return errors.New("delete not supported for non full api")
 	}

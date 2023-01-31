@@ -373,7 +373,7 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 	return url, nil
 }
 
-func (os *s3Session) Delete(ctx context.Context, name string) error {
+func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 	if os.s3svc == nil {
 		return errors.New("delete not supported for non full api")
 	}
