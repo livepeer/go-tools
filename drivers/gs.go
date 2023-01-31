@@ -166,7 +166,7 @@ func (os *gsSession) DeleteFile(ctx context.Context, name string) error {
 		}
 	}
 	return os.client.Bucket(os.bucket).
-		Object(name).
+		Object(os.key + "/" + name).
 		Delete(ctx)
 }
 
