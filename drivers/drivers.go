@@ -274,19 +274,15 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 	}
 	if u.Scheme == "w3s" {
 		// W3S URL format: 'w3s://key:proof@pubId/path'
-		// Key and proof are base64-encoded and url-escaped
+		// Key and proof are base64url-encoded
 		// pubId must be a unique value used until Publish() is called
-		ucanKey, err := url.PathUnescape(u.User.Username())
+		ucanKey := u.User.Username()
 		if err != nil {
 			return nil, errors.New("w3s private key not found or in wrong format")
 		}
-		ucanProofEscaped, ok := u.User.Password()
+		ucanProof, ok := u.User.Password()
 		if !ok {
 			return nil, errors.New("w3s proof not found")
-		}
-		ucanProof, err := url.PathUnescape(ucanProofEscaped)
-		if err != nil {
-			return nil, errors.New("w3 proof in wrong format")
 		}
 		pubId := u.Hostname()
 		filePath := u.Path
