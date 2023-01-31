@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const w3SDefaultSaveTimeout = 2 * time.Minute
+const w3SDefaultSaveTimeout = 5 * time.Minute
 
 var cidV1 = merkledag.V1CidPrefix()
 
