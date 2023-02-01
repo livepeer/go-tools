@@ -72,7 +72,7 @@ func TestFsOS(t *testing.T) {
 }
 
 func TestDeleteFile(t *testing.T) {
-	file, err := ioutil.TempFile(os.TempDir(), "TestDeleteFileefix")
+	file, err := os.CreateTemp("", "TestDeleteFileefix")
 	require.NoError(t, err)
 
 	// Defer a removal of the file so that we don't litter the filesystem when this test fails
