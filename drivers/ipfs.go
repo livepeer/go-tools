@@ -2,12 +2,13 @@ package drivers
 
 import (
 	"context"
-	"github.com/livepeer/go-tools/clients"
 	"io"
 	"net/http"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/livepeer/go-tools/clients"
 )
 
 type IpfsOS struct {
@@ -18,7 +19,6 @@ type IpfsOS struct {
 type IpfsSession struct {
 	os       *IpfsOS
 	filename string
-	ended    bool
 	client   clients.IPFS
 	dCache   map[string]*dataCache
 	dLock    sync.RWMutex
@@ -105,6 +105,10 @@ func (session *IpfsSession) IsOwn(url string) bool {
 
 func (session *IpfsSession) GetInfo() *OSInfo {
 	return nil
+}
+
+func (ostore *IpfsSession) DeleteFile(ctx context.Context, name string) error {
+	return ErrNotSupported
 }
 
 func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {

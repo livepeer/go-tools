@@ -58,6 +58,10 @@ func (s *MockOSSession) ListFiles(ctx context.Context, prefix, delim string) (Pa
 	return nil, nil
 }
 
+func (s *MockOSSession) DeleteFile(ctx context.Context, name string) error {
+	return nil
+}
+
 func (s *MockOSSession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
 	args := s.Called(ctx, name)
 	var fi *FileInfoReader

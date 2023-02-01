@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -119,6 +120,10 @@ func (ostore *FSSession) ListFiles(ctx context.Context, dir, delim string) (Page
 		}
 	}
 	return pi, nil
+}
+
+func (ostore *FSSession) DeleteFile(ctx context.Context, name string) error {
+	return os.Remove(filepath.Join(ostore.path, name))
 }
 
 func (ostore *FSSession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {

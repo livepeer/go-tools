@@ -156,6 +156,20 @@ func (os *gsSession) createClient() error {
 	return nil
 }
 
+func (os *gsSession) DeleteFile(ctx context.Context, name string) error {
+	if !os.useFullAPI {
+		return errors.New("delete not supported for non full api")
+	}
+	if os.client == nil {
+		if err := os.createClient(); err != nil {
+			return err
+		}
+	}
+	return os.client.Bucket(os.bucket).
+		Object(os.key + "/" + name).
+		Delete(ctx)
+}
+
 func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
 	if os.useFullAPI {
 		if os.client == nil {
@@ -335,7 +349,6 @@ func gsGetFields(sess *s3Session) map[string]string {
 // gsCreatePolicy returns policy, signature
 func gsCreatePolicy(signer *gsSigner, bucket, region, path string) (string, string) {
 	const timeFormat = "2006-01-02T15:04:05.999Z"
-	const shortTimeFormat = "20060102"
 
 	expireAt := time.Now().Add(S3_POLICY_EXPIRE_IN_HOURS * time.Hour)
 	expireFmt := expireAt.UTC().Format(timeFormat)

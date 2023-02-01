@@ -24,6 +24,7 @@ var ext2mime = map[string]string{
 }
 
 var ErrFormatMime = fmt.Errorf("unknown file extension")
+var ErrNotSupported = fmt.Errorf("not supported")
 
 // NodeStorage is current node's primary driver
 var NodeStorage OSDriver
@@ -130,6 +131,9 @@ type OSSession interface {
 
 	// ListFiles return list of files
 	ListFiles(ctx context.Context, prefix, delim string) (PageInfo, error)
+
+	// DeleteFile deletes a single file. 'name' should be the relative filename
+	DeleteFile(ctx context.Context, name string) error
 
 	ReadData(ctx context.Context, name string) (*FileInfoReader, error)
 }

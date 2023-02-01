@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -370,6 +371,21 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 
 	url := os.getAbsURL(*keyname)
 	return url, nil
+}
+
+func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
+	if os.s3svc == nil {
+		return errors.New("delete not supported for non full api")
+	}
+	params := &s3.DeleteObjectInput{
+		Bucket: aws.String(os.bucket),
+		Key:    aws.String(name),
+	}
+	if os.key != "" && !strings.HasPrefix(name, os.key+"/") {
+		params.Key = aws.String(path.Join(os.key, name))
+	}
+	_, err := os.s3svc.DeleteObjectWithContext(ctx, params)
+	return err
 }
 
 func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
