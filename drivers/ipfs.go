@@ -2,7 +2,6 @@ package drivers
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"path"
@@ -110,7 +109,7 @@ func (session *IpfsSession) GetInfo() *OSInfo {
 }
 
 func (ostore *IpfsSession) DeleteFile(ctx context.Context, name string) error {
-	return errors.New("unsupported method: cannot delete files from IPFS")
+	return ErrNotSupported
 }
 
 func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {

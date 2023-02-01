@@ -24,6 +24,7 @@ var ext2mime = map[string]string{
 }
 
 var ErrFormatMime = fmt.Errorf("unknown file extension")
+var ErrNotSupported = fmt.Errorf("not supported")
 
 // NodeStorage is current node's primary driver
 var NodeStorage OSDriver
