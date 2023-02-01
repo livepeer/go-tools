@@ -19,7 +19,6 @@ type IpfsOS struct {
 type IpfsSession struct {
 	os       *IpfsOS
 	filename string
-	ended    bool
 	client   clients.IPFS
 	dCache   map[string]*dataCache
 	dLock    sync.RWMutex
