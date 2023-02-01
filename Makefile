@@ -1,9 +1,13 @@
 .PHONY: all
-all: build test
+all: fmt build test
 
 .PHONY: build
 build:
 	go build ./...
+
+.PHONY: fmt
+fmt:
+	go fmt ./...
 
 .PHONY: tets 
 test:

@@ -349,7 +349,6 @@ func gsGetFields(sess *s3Session) map[string]string {
 // gsCreatePolicy returns policy, signature
 func gsCreatePolicy(signer *gsSigner, bucket, region, path string) (string, string) {
 	const timeFormat = "2006-01-02T15:04:05.999Z"
-	const shortTimeFormat = "20060102"
 
 	expireAt := time.Now().Add(S3_POLICY_EXPIRE_IN_HOURS * time.Hour)
 	expireFmt := expireAt.UTC().Format(timeFormat)
