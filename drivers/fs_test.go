@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"

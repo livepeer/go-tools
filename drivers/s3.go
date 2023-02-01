@@ -381,9 +381,8 @@ func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 		Bucket: aws.String(os.bucket),
 		Key:    aws.String(name),
 	}
-	if *params.Key == "" {
-		// if name is not specified, assume that this session already created with specific key
-		params.Key = aws.String(os.key)
+	if os.key != "" && !strings.HasPrefix(name, os.key+"/") {
+		params.Key = aws.String(path.Join(os.key, name))
 	}
 	_, err := os.s3svc.DeleteObjectWithContext(ctx, params)
 	return err
