@@ -30,6 +30,9 @@ var cidV1 = merkledag.V1CidPrefix()
 
 // This represents the main CAR directory structure organized by pubId.
 // Data for each pubId is removed after the CAR directory is published.
+//
+// Note that if Publish() is not called for the given pubId, it can cause memory leak.
+// This will be fixed as part of https://github.com/livepeer/go-tools/issues/16.
 var (
 	dataToPublish   = make(map[string]*rootCar)
 	dataToPublishMu sync.Mutex
@@ -160,7 +163,7 @@ func (rc *rootCar) addFile(ctx context.Context, dirPath, filename, fileCid, carC
 	// split path by "/", ignore empty strings
 	dirPaths := strings.FieldsFunc(dirPath, func(c rune) bool { return c == '/' })
 
-	newRoot, err := rc.addFileToDag(ctx, rc.root, dirPaths, filename, fileCid)
+	newRoot, err := rc.addFileToDagRecursive(ctx, rc.root, dirPaths, filename, fileCid)
 	if err != nil {
 		return err
 	}
@@ -169,7 +172,13 @@ func (rc *rootCar) addFile(ctx context.Context, dirPath, filename, fileCid, carC
 	return nil
 }
 
-func (rc *rootCar) addFileToDag(ctx context.Context, n *merkledag.ProtoNode, dirPaths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
+// addFileToDagRecursive recursively creates the nodes defined by dirPaths and adds the CID link at the end.
+// This uses the DFS algorithm in which visiting each node does the following actions:
+// - if no more dirPaths, create a leaf with the link to the file CID, otherwise do the following
+// - create directory defined by the first element in dirPaths
+// - recursively create the rest of directories defined with the remaining dirPaths
+// - recalculate the CID of the current node (it changed because its children have changed)
+func (rc *rootCar) addFileToDagRecursive(ctx context.Context, n *merkledag.ProtoNode, dirPaths []string, filename, fileCid string) (*merkledag.ProtoNode, error) {
 	if len(dirPaths) == 0 {
 		// n is a leaf
 		fCid, err := cid.Parse(fileCid)
@@ -187,7 +196,7 @@ func (rc *rootCar) addFileToDag(ctx context.Context, n *merkledag.ProtoNode, dir
 	if err != nil {
 		return nil, err
 	}
-	child, err = rc.addFileToDag(ctx, child, childPaths, filename, fileCid)
+	child, err = rc.addFileToDagRecursive(ctx, child, childPaths, filename, fileCid)
 	if err != nil {
 		return nil, err
 	}
