@@ -68,6 +68,10 @@ func (ostore *FSOS) Description() string {
 	return "File system driver."
 }
 
+func (ostore *FSOS) Publish(ctx context.Context) (string, error) {
+	return "", ErrNotSupported
+}
+
 func (ostore *FSSession) OS() OSDriver {
 	return ostore.os
 }

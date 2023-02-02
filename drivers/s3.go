@@ -203,6 +203,10 @@ func (ostore *S3OS) UriSchemes() []string {
 	return []string{"s3", "s3+http", "s3+https"}
 }
 
+func (ostore *S3OS) Publish(ctx context.Context) (string, error) {
+	return "", ErrNotSupported
+}
+
 func (ostore *S3OS) Description() string {
 	return "AWS S3 or S3 compatible storage."
 }

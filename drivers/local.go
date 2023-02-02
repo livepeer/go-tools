@@ -54,6 +54,10 @@ func (ostore *MemoryOS) NewSession(path string) OSSession {
 	return session
 }
 
+func (ostore *MemoryOS) Publish(ctx context.Context) (string, error) {
+	return "", ErrNotSupported
+}
+
 func (ostore *MemoryOS) GetSession(path string) *MemorySession {
 	ostore.lock.Lock()
 	defer ostore.lock.Unlock()

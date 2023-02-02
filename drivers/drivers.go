@@ -44,10 +44,14 @@ type OSDriver interface {
 	NewSession(path string) OSSession
 	Description() string
 	UriSchemes() []string
+	Publish(ctx context.Context) (string, error)
 }
 
 // ErrNoNextPage indicates that there is no next page in ListFiles
 var ErrNoNextPage = fmt.Errorf("no next page")
+
+// ErrNotSupported indicated that the functionality is not supported by the given driver
+var ErrNotSupported = fmt.Errorf("not supported")
 
 type FileInfo struct {
 	Name         string
@@ -68,6 +72,7 @@ var AvailableDrivers = []OSDriver{
 	&IpfsOS{},
 	&MemoryOS{},
 	&S3OS{},
+	&W3sOS{},
 }
 
 type PageInfo interface {
@@ -270,6 +275,15 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 	if u.Scheme == "file" {
 		u.Scheme = ""
 		return NewFSDriver(u), nil
+	}
+	if u.Scheme == "w3s" {
+		// W3S URL format: 'w3s://proof@pubId/path'
+		// Proof is base64url-encoded
+		// pubId must be a unique value used until Publish() is called
+		w3sUcanProof := u.User.Username()
+		pubId := u.Hostname()
+		filePath := u.Path
+		return NewW3sDriver(w3sUcanProof, filePath, pubId), nil
 	}
 	return nil, fmt.Errorf("unrecognized OS scheme: %s", u.Scheme)
 }
