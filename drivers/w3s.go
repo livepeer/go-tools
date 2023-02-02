@@ -122,6 +122,10 @@ func (session *W3sSession) getAbsolutePath(name string) string {
 	return ""
 }
 
+func (session *W3sSession) DeleteFile(ctx context.Context, name string) error {
+	return ErrNotSupported
+}
+
 func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
 	if timeout <= 0 {
 		timeout = w3SDefaultSaveTimeout

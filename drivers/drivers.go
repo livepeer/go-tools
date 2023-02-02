@@ -24,6 +24,11 @@ var ext2mime = map[string]string{
 }
 
 var ErrFormatMime = fmt.Errorf("unknown file extension")
+
+// ErrNoNextPage indicates that there is no next page in ListFiles
+var ErrNoNextPage = fmt.Errorf("no next page")
+
+// ErrNotSupported indicated that the functionality is not supported by the given driver
 var ErrNotSupported = fmt.Errorf("not supported")
 
 // NodeStorage is current node's primary driver
@@ -46,12 +51,6 @@ type OSDriver interface {
 	UriSchemes() []string
 	Publish(ctx context.Context) (string, error)
 }
-
-// ErrNoNextPage indicates that there is no next page in ListFiles
-var ErrNoNextPage = fmt.Errorf("no next page")
-
-// ErrNotSupported indicated that the functionality is not supported by the given driver
-var ErrNotSupported = fmt.Errorf("not supported")
 
 type FileInfo struct {
 	Name         string
