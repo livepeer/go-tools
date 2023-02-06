@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	bserv "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
@@ -145,7 +146,7 @@ func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Re
 	}
 	defer deleteFile(carPath)
 
-	carCid, err := w3StoreCar(ctx, carPath)
+	carCid, err := w3StoreCar(ctx, session.os.ucanProof, carPath)
 	if err != nil {
 		return "", err
 	}
@@ -237,20 +238,20 @@ func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 	defer ostore.deleteRootCar()
 
 	rCar.mu.Lock()
-	if err := rCar.storeDir(ctx); err != nil {
+	if err := rCar.storeDir(ctx, ostore.ucanProof); err != nil {
 		return "", err
 	}
 	carCids := rCar.carCids
 	rCar.mu.Unlock()
 
-	if err := w3UploadCar(ctx, rootCid, carCids); err != nil {
+	if err := w3UploadCar(ctx, ostore.ucanProof, rootCid, carCids); err != nil {
 		return "", err
 	}
 
 	return fmt.Sprintf("https://%s.ipfs.w3s.link", rootCid), nil
 }
 
-func (rc *rootCar) storeDir(ctx context.Context) error {
+func (rc *rootCar) storeDir(ctx context.Context, proof string) error {
 	carFile, err := os.CreateTemp("", "car")
 	if err != nil {
 		return err
@@ -259,7 +260,7 @@ func (rc *rootCar) storeDir(ctx context.Context) error {
 	car.WriteCar(ctx, rc.dag, []cid.Cid{rc.root.Cid()}, carFile, merkledag.IgnoreMissing())
 	carFile.Close()
 
-	storedCid, err := w3StoreCar(ctx, carFile.Name())
+	storedCid, err := w3StoreCar(ctx, proof, carFile.Name())
 	if err != nil {
 		return err
 	}
@@ -336,8 +337,8 @@ func ipfsCarPack(ctx context.Context, filePath string) (string, string, error) {
 }
 
 // w3StoreCar uses external binary `w3` to store a CAR file in web3.storage.
-func w3StoreCar(ctx context.Context, carPath string) (string, error) {
-	out, err := exec.CommandContext(ctx, "w3", "can", "store", "add", carPath).Output()
+func w3StoreCar(ctx context.Context, proof, carPath string) (string, error) {
+	out, err := runWithCredentials(exec.CommandContext(ctx, "livepeer-w3", "can", "store", "add", carPath), proof)
 	if err != nil {
 		return "", err
 	}
@@ -345,10 +346,32 @@ func w3StoreCar(ctx context.Context, carPath string) (string, error) {
 }
 
 // w3StoreCar uses external binary `w3` to bind and publish multiple CARs.
-func w3UploadCar(ctx context.Context, rootCid string, carCids []string) error {
+func w3UploadCar(ctx context.Context, proof, rootCid string, carCids []string) error {
 	args := []string{"can", "upload", "add"}
 	args = append(args, rootCid)
 	args = append(args, carCids...)
-	_, err := exec.CommandContext(ctx, "w3", args...).Output()
+	_, err := runWithCredentials(exec.CommandContext(ctx, "livepeer-w3", args...), proof)
 	return err
+}
+
+func runWithCredentials(cmd *exec.Cmd, proof string) ([]byte, error) {
+	if proof == "" {
+		return nil, fmt.Errorf("UCAN proof not found")
+	}
+	base64Proof, err := base64UrlToBase64(proof)
+	if err != nil {
+		return nil, fmt.Errorf("invalid UCAN proof format: %s", err)
+	}
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("W3_PRINCIPAL_KEY='%s'", W3sUcanKey))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("W3_DELEGATION_PROOF='%s'", base64Proof))
+	return cmd.Output()
+}
+
+func base64UrlToBase64(proof string) (string, error) {
+	ucanProofByte, err := base64.URLEncoding.DecodeString(proof)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(ucanProofByte), nil
 }
