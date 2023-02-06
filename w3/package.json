@@ -1,0 +1,17 @@
+{
+  "name": "w3",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "W3 CLI which enables executing a command with the given UCAN key and delegation proof",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ipld/car": "^5.1.0",
+    "@web3-storage/w3up-client": "^4.1.0",
+    "multiformats": "^11.0.1"
+  }
+}

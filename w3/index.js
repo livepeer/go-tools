@@ -1,9 +1,5 @@
 #!/usr/bin/env node
 
-// A tool acting like w3 CLI which enables executing a command with the given UCAN key and delegation proof.
-// To install the dependencies, execute the following command
-// npm i multiformats @ipld/car@5.1.0 @ucanto/principal@4.2.3 @web3-storage/w3up-client@4.1.0
-
 import fs from "fs";
 import { CID } from "multiformats";
 import { CarReader } from "@ipld/car";
