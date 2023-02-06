@@ -3,14 +3,14 @@
 import fs from "fs";
 import { CID } from "multiformats";
 import { CarReader } from "@ipld/car";
-import { derive } from "@ucanto/principal/ed25519";
-import { importDAG } from "@ucanto/core/delegation";
+import { ed25519 } from "@ucanto/principal";
+import { Delegation } from "@ucanto/core";
 import { AgentData } from "@web3-storage/access";
 import { Client } from "@web3-storage/w3up-client";
 
 async function getClient() {
     // create a client with UCAN private key passed in the env variable
-    const principal = await derive(
+    const principal = await ed25519.derive(
         Buffer.from(process.env.W3_PRINCIPAL_KEY, "base64")
     );
     const data = await AgentData.create({ principal });
@@ -24,7 +24,7 @@ async function getClient() {
     for await (const block of reader.blocks()) {
         blocks.push(block);
     }
-    const proof = importDAG(blocks);
+    const proof = Delegation.importDAG(blocks);
 
     const space = await client.addSpace(proof);
     await client.setCurrentSpace(space.did());
