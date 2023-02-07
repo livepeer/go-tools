@@ -23,9 +23,9 @@ type testFile struct {
 func TestW3sOS(t *testing.T) {
 	require := require2.New(t)
 
-	W3sUcanKey = os.Getenv("W3S_UCAN_KEY")
+	_, present := os.LookupEnv("W3_PRINCIPAL_KEY")
 	w3sUcanProof := os.Getenv("W3S_UCAN_PROOF")
-	if W3sUcanKey == "" || w3sUcanProof == "" {
+	if !present || w3sUcanProof == "" {
 		fmt.Println("No w3s credentials, test skipped")
 		return
 	}
