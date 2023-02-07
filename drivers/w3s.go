@@ -24,9 +24,6 @@ import (
 
 const w3SDefaultSaveTimeout = 5 * time.Minute
 
-// web3.storage base64url-encoded UCAN Private Key
-var W3sUcanKey = ""
-
 var cidV1 = merkledag.V1CidPrefix()
 
 // This represents the main CAR directory structure organized by pubId.
@@ -363,7 +360,6 @@ func runWithCredentials(cmd *exec.Cmd, proof string) ([]byte, error) {
 		return nil, fmt.Errorf("invalid UCAN proof format: %s", err)
 	}
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("W3_PRINCIPAL_KEY='%s'", W3sUcanKey))
 	cmd.Env = append(cmd.Env, fmt.Sprintf("W3_DELEGATION_PROOF='%s'", base64Proof))
 	return cmd.Output()
 }
