@@ -13,6 +13,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -276,6 +277,11 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 		return NewFSDriver(u), nil
 	}
 	if u.Scheme == "w3s" {
+		_, present := os.LookupEnv("W3_PRINCIPAL_KEY")
+		if !present {
+			return nil, fmt.Errorf("env variable 'W3_PRINCIPAL_KEY' is not defined")
+		}
+
 		// W3S URL format: 'w3s://proof@pubId/path'
 		// Proof is base64url-encoded
 		// pubId must be a unique value used until Publish() is called
