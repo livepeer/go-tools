@@ -365,7 +365,7 @@ func runWithCredentials(cmd *exec.Cmd, proof string) ([]byte, error) {
 }
 
 func base64UrlToBase64(proof string) (string, error) {
-	ucanProofByte, err := base64.URLEncoding.DecodeString(proof)
+	ucanProofByte, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(proof)
 	if err != nil {
 		return "", err
 	}

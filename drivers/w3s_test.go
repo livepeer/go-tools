@@ -86,3 +86,38 @@ func randFiledata() []byte {
 	rand.Read(rndData)
 	return rndData
 }
+
+func TestBase64UrlToBase64(t *testing.T) {
+	require := require2.New(t)
+
+	tests := []struct {
+		name string
+		arg  string
+		exp  string
+	}{
+		{
+			name: "standard text",
+			arg:  "c29tZSB0ZXh0",
+			exp:  "c29tZSB0ZXh0",
+		},
+		{
+			name: "binary no padding",
+			arg:  "eSK_-HCmI596rRX4xY",
+			exp:  "eSK/+HCmI596rRX4xQ==",
+		},
+		{
+			name: "binary with padding",
+			arg:  "_-HCmI596rRX4xY",
+			exp:  "/+HCmI596rRX4xY=",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := base64UrlToBase64(tc.arg)
+			require.NoError(err)
+			require.Equal(tc.exp, res)
+		})
+	}
+}
