@@ -24,6 +24,8 @@ import (
 
 const w3SDefaultSaveTimeout = 5 * time.Minute
 
+var base64Url = base64.URLEncoding.WithPadding(base64.NoPadding)
+
 var cidV1 = merkledag.V1CidPrefix()
 
 // This represents the main CAR directory structure organized by pubId.
@@ -365,7 +367,7 @@ func runWithCredentials(cmd *exec.Cmd, proof string) ([]byte, error) {
 }
 
 func base64UrlToBase64(proof string) (string, error) {
-	ucanProofByte, err := base64.URLEncoding.DecodeString(proof)
+	ucanProofByte, err := base64Url.DecodeString(proof)
 	if err != nil {
 		return "", err
 	}
