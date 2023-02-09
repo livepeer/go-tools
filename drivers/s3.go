@@ -14,6 +14,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -366,13 +367,15 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 	if timeout == 0 {
 		timeout = defaultSaveTimeout
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	_, err = uploader.UploadWithContext(ctx, params)
+	newctx, cancel := context.WithTimeout(ctx, timeout)
+	_, err = uploader.UploadWithContext(newctx, params)
 	cancel()
 	if err != nil {
+		if os.recoverError(err) {
+			return os.saveDataPut(ctx, name, data, meta, timeout)
+		}
 		return "", err
 	}
-
 	url := os.getAbsURL(*keyname)
 	return url, nil
 }
@@ -390,6 +393,24 @@ func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 	}
 	_, err := os.s3svc.DeleteObjectWithContext(ctx, params)
 	return err
+}
+
+var wrongRegionRe = regexp.MustCompile("^AuthorizationHeaderMalformed: The authorization header is malformed; the region '([a-zA-Z0-9-]+)' is wrong; expecting '([a-zA-Z0-9-]+)'")
+
+// Given an error, attempt to adjust our configuration to facilitate a succesful retry. Returns true if we should retry.
+func (os *s3Session) recoverError(err error) bool {
+	results := wrongRegionRe.FindStringSubmatch(fmt.Sprint(err))
+	if len(results) == 0 {
+		return false
+	}
+	newRegion := results[2]
+	oldRegion := *os.s3sess.Config.Region
+	// Avoid an infinite loop; if nothing's going to change don't bother
+	if oldRegion == newRegion {
+		return false
+	}
+	os.s3sess.Config.Region = aws.String(newRegion)
+	return true
 }
 
 func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
