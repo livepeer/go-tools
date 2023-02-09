@@ -247,7 +247,7 @@ func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("https://%s.ipfs.w3s.link", rootCid), nil
+	return fmt.Sprintf("ipfs://%s", rootCid), nil
 }
 
 func (rc *rootCar) storeDir(ctx context.Context, proof string) error {
