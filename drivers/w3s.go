@@ -317,10 +317,10 @@ func ipfsCarPack(ctx context.Context, filePath string) (string, string, error) {
 		return "", "", err
 	}
 
-	out, err := exec.CommandContext(ctx, "ipfs-car", "--wrapWithDirectory", "false", "--pack", filePath, "--output", fCar.Name()).Output()
+	out, err := exec.CommandContext(ctx, "ipfs-car", "--wrapWithDirectory", "false", "--pack", filePath, "--output", fCar.Name()).CombinedOutput()
 	if err != nil {
 		deleteFile(fCar.Name())
-		return "", "", err
+		return "", "", fmt.Errorf("executing 'ipfs-car' failed, command output: %s, err: %v", string(out), err)
 	}
 
 	r := regexp.MustCompile(`root CID: ([A-Za-z0-9]+)`)
@@ -339,7 +339,7 @@ func ipfsCarPack(ctx context.Context, filePath string) (string, string, error) {
 func w3StoreCar(ctx context.Context, proof, carPath string) (string, error) {
 	out, err := runWithCredentials(exec.CommandContext(ctx, "livepeer-w3", "can", "store", "add", carPath), proof)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("executing 'livepeer-w3 can store add' failed, command output: %s, err: %v", string(out), err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
@@ -349,8 +349,11 @@ func w3UploadCar(ctx context.Context, proof, rootCid string, carCids []string) e
 	args := []string{"can", "upload", "add"}
 	args = append(args, rootCid)
 	args = append(args, carCids...)
-	_, err := runWithCredentials(exec.CommandContext(ctx, "livepeer-w3", args...), proof)
-	return err
+	out, err := runWithCredentials(exec.CommandContext(ctx, "livepeer-w3", args...), proof)
+	if err != nil {
+		return fmt.Errorf("executing 'livepeer-w3 can store upload' failed, command output: %s, err: %v", string(out), err)
+	}
+	return nil
 }
 
 func runWithCredentials(cmd *exec.Cmd, proof string) ([]byte, error) {
@@ -363,7 +366,7 @@ func runWithCredentials(cmd *exec.Cmd, proof string) ([]byte, error) {
 	}
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("W3_DELEGATION_PROOF='%s'", base64Proof))
-	return cmd.Output()
+	return cmd.CombinedOutput()
 }
 
 func base64UrlToBase64(proof string) (string, error) {
