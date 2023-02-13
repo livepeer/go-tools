@@ -9,6 +9,7 @@ import (
 	require2 "github.com/stretchr/testify/require"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"testing"
@@ -60,9 +61,15 @@ func TestW3sOS(t *testing.T) {
 	u, err := NewW3sDriver(w3sUcanProof, "", pubId).Publish(context.TODO())
 	require.NoError(err)
 
+	// convert to w3s link url
+	URL, err := url.Parse(u)
+	require.NoError(err)
+	baseUrl, err := url.Parse(fmt.Sprintf("https://%s.ipfs.w3s.link/", URL.Host))
+	require.NoError(err)
+
 	// verify the test file data
 	for _, tf := range testFiles {
-		fileUrl := fmt.Sprintf("%s/%s/%s", u, tf.dirPath, tf.name)
+		fileUrl := fmt.Sprintf("%s/%s/%s", baseUrl, tf.dirPath, tf.name)
 		require.NoError(err)
 
 		resp, err2 := http.Get(fileUrl)
