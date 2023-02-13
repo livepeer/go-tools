@@ -154,3 +154,22 @@ func TestStorjS3Read(t *testing.T) {
 		t.Skip("No S3 credentials, test skipped")
 	}
 }
+
+func TestWasabiS3Upload(t *testing.T) {
+	s3key := os.Getenv("WASABI_S3_KEY")
+	s3secret := os.Getenv("WASABI_S3_SECRET")
+	s3bucket := os.Getenv("WASABI_S3_BUCKET")
+	s3host := os.Getenv("WASABI_S3_HOST")
+	require := require.New(t)
+	if s3key != "" && s3secret != "" {
+		// test full path in URI
+		testUriKey := "test/" + uuid.New().String() + ".ts"
+		fullUrl := fmt.Sprintf("s3+https://%s:%s@%s/%s/%s", s3key, s3secret, s3host, s3bucket, testUriKey)
+		S3UploadTest(require, fullUrl, "")
+		// test key in SaveData arg
+		fullUrl = fmt.Sprintf("s3+https://%s:%s@%s/%s", s3key, s3secret, s3host, s3bucket)
+		S3UploadTest(require, fullUrl, testUriKey)
+	} else {
+		t.Skip("No Wasabi S3 credentials, test skipped")
+	}
+}
