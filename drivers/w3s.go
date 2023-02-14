@@ -234,7 +234,6 @@ func (rc *rootCar) getOrCreateChild(ctx context.Context, n *merkledag.ProtoNode,
 func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 	rCar := ostore.getRootCar()
 	rootCid := rCar.root.Cid().String()
-	defer ostore.deleteRootCar()
 
 	rCar.mu.Lock()
 	if err := rCar.storeDir(ctx, ostore.ucanProof); err != nil {
@@ -247,6 +246,7 @@ func (ostore *W3sOS) Publish(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	defer ostore.deleteRootCar()
 	return fmt.Sprintf("ipfs://%s", rootCid), nil
 }
 
