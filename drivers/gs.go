@@ -343,6 +343,10 @@ func (os *gsSession) ReadData(ctx context.Context, name string) (*FileInfoReader
 	return res, nil
 }
 
+func (os *gsSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+	return "", ErrNotSupported
+}
+
 func gsGetFields(sess *s3Session) map[string]string {
 	return map[string]string{
 		"GoogleAccessId": sess.credential,

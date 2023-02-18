@@ -99,6 +99,10 @@ func (session *IpfsSession) ReadData(ctx context.Context, name string) (*FileInf
 	return res, nil
 }
 
+func (session *IpfsSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+	return "", ErrNotSupported
+}
+
 func (session *IpfsSession) IsExternal() bool {
 	return false
 }

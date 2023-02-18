@@ -152,6 +152,10 @@ func (ostore *FSSession) ReadData(ctx context.Context, name string) (*FileInfoRe
 	return res, nil
 }
 
+func (ostore *FSSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+	return "", ErrNotSupported
+}
+
 func (ostore *FSSession) IsExternal() bool {
 	return false
 }
