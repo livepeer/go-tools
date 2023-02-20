@@ -104,6 +104,10 @@ func (session *W3sSession) ReadData(ctx context.Context, name string) (*FileInfo
 	return nil, ErrNotSupported
 }
 
+func (session *W3sSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+	return "", ErrNotSupported
+}
+
 func (session *W3sSession) IsExternal() bool {
 	return false
 }

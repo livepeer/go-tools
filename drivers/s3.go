@@ -489,6 +489,14 @@ func (os *s3Session) IsOwn(url string) bool {
 	return strings.HasPrefix(url, os.host)
 }
 
+func (os *s3Session) Presign(bucket, key string, expire time.Duration) (string, error) {
+	req, _ := os.s3svc.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	return req.Presign(expire)
+}
+
 func makeHmac(key []byte, data []byte) []byte {
 	hash := hmac.New(sha256.New, key)
 	hash.Write(data)

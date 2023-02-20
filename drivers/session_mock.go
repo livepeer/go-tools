@@ -73,3 +73,7 @@ func (s *MockOSSession) ReadData(ctx context.Context, name string) (*FileInfoRea
 func (s *MockOSSession) OS() OSDriver {
 	return nil
 }
+
+func (s *MockOSSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+	return "", ErrNotSupported
+}

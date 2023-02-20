@@ -141,6 +141,8 @@ type OSSession interface {
 	DeleteFile(ctx context.Context, name string) error
 
 	ReadData(ctx context.Context, name string) (*FileInfoReader, error)
+
+	Presign(bucket, key string, expire time.Duration) (string, error)
 }
 
 type OSDriverDescr struct {

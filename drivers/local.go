@@ -192,6 +192,10 @@ func (ostore *MemorySession) GetData(name string) []byte {
 	return nil
 }
 
+func (ostore *MemorySession) Presign(bucket, key string, expire time.Duration) (string, error) {
+	return "", ErrNotSupported
+}
+
 func (ostore *MemorySession) IsExternal() bool {
 	return false
 }
