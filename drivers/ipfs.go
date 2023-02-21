@@ -99,7 +99,7 @@ func (session *IpfsSession) ReadData(ctx context.Context, name string) (*FileInf
 	return res, nil
 }
 
-func (session *IpfsSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+func (session *IpfsSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }
 

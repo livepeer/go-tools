@@ -489,9 +489,13 @@ func (os *s3Session) IsOwn(url string) bool {
 	return strings.HasPrefix(url, os.host)
 }
 
-func (os *s3Session) Presign(bucket, key string, expire time.Duration) (string, error) {
+func (os *s3Session) Presign(name string, expire time.Duration) (string, error) {
+	key := os.key
+	if name != "" {
+		key = path.Join(key, name)
+	}
 	req, _ := os.s3svc.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String(bucket),
+		Bucket: aws.String(os.bucket),
 		Key:    aws.String(key),
 	})
 	return req.Presign(expire)

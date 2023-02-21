@@ -192,7 +192,7 @@ func (ostore *MemorySession) GetData(name string) []byte {
 	return nil
 }
 
-func (ostore *MemorySession) Presign(bucket, key string, expire time.Duration) (string, error) {
+func (ostore *MemorySession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }
 

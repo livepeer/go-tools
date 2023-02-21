@@ -343,7 +343,7 @@ func (os *gsSession) ReadData(ctx context.Context, name string) (*FileInfoReader
 	return res, nil
 }
 
-func (os *gsSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+func (os *gsSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }
 

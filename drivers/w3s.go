@@ -104,7 +104,7 @@ func (session *W3sSession) ReadData(ctx context.Context, name string) (*FileInfo
 	return nil, ErrNotSupported
 }
 
-func (session *W3sSession) Presign(bucket, key string, expire time.Duration) (string, error) {
+func (session *W3sSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }
 
