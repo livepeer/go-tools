@@ -142,7 +142,7 @@ type OSSession interface {
 
 	ReadData(ctx context.Context, name string) (*FileInfoReader, error)
 
-	Presign(bucket, key string, expire time.Duration) (string, error)
+	Presign(name string, expire time.Duration) (string, error)
 }
 
 type OSDriverDescr struct {
