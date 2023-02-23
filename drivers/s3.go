@@ -13,6 +13,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -39,6 +40,8 @@ const (
 	// Cloud Storage (also improves performance). Can make this configurable in
 	// the future for optimized support of other storage providers.
 	uploaderPartSize = 63 * 1024 * 1024
+	// default region parameter if we can't derive one from the url
+	defaultIgnoredRegion = "ignored"
 )
 
 // S3OS S3 backed object storage driver. For own storage access key and access key secret
@@ -84,6 +87,26 @@ func customS3Host(host string, ssl bool) string {
 		return fmt.Sprintf("%s://%s", protocol, host)
 	}
 	return host
+}
+
+// Derive a reasonable "region" parameter from a host
+func customS3Region(host string) string {
+	if host == "" {
+		return defaultIgnoredRegion
+	}
+	u, err := url.Parse(host)
+	if err != nil {
+		return defaultIgnoredRegion
+	}
+	hostname := u.Hostname()
+	parts := strings.Split(hostname, ".")
+	if len(parts) == 1 {
+		return hostname
+	}
+	if len(parts) == 2 {
+		return parts[0]
+	}
+	return parts[1]
 }
 
 func newS3Session(info *S3OSInfo) OSSession {
@@ -134,8 +157,8 @@ func NewCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix strin
 		awsSecretAccessKey: accessKeySecret,
 		keyPrefix:          keyPrefix,
 		useFullAPI:         useFullAPI,
-		region:             "ignored",
 	}
+	os.region = customS3Region(os.host)
 	if !useFullAPI {
 		os.host += "/" + bucket
 	}
