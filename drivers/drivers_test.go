@@ -3,12 +3,14 @@ package drivers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestS3URL(t *testing.T) {
@@ -168,4 +170,22 @@ func TestDescribeDriversJson(t *testing.T) {
 		assert.Equal(h.Description(), driverDescr.Drivers[i].Description)
 		assert.Equal(h.UriSchemes(), driverDescr.Drivers[i].UriSchemes)
 	}
+}
+
+func TestItChoosesTheCorrectContentTypes(t *testing.T) {
+	extType, err := TypeByExtension(".m3u8")
+	require.NoError(t, err)
+	require.Equal(t, "application/x-mpegurl", extType)
+
+	extType, err = TypeByExtension(".ts")
+	require.NoError(t, err)
+	require.Equal(t, "video/mp2t", extType)
+
+	extType, err = TypeByExtension(".mp4")
+	require.NoError(t, err)
+	require.Equal(t, "video/mp4", extType)
+
+	extType, err = TypeByExtension(".json")
+	require.NoError(t, err)
+	require.Equal(t, "application/json", extType)
 }
