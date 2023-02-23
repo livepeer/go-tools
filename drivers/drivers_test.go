@@ -71,7 +71,7 @@ func TestCustomS3URL(t *testing.T) {
 	assert.Equal("bucket-name", s3.bucket)
 	assert.Equal("user", s3.awsAccessKeyID)
 	assert.Equal("password", s3.awsSecretAccessKey)
-	assert.Equal("ignored", s3.region)
+	assert.Equal("example", s3.region)
 }
 
 func TestCustomS3URLWithRegion(t *testing.T) {
@@ -82,9 +82,25 @@ func TestCustomS3URLWithRegion(t *testing.T) {
 	assert.Equal(nil, err)
 	assert.Equal("http://example.com:9000", s3.host)
 	assert.Equal("bucket-name", s3.bucket)
-	assert.Equal("ignored", s3.region)
+	assert.Equal("example", s3.region)
 	assert.Equal("user", s3.awsAccessKeyID)
 	assert.Equal("password", s3.awsSecretAccessKey)
+}
+
+func TestCustomS3RegionParser(t *testing.T) {
+	cases := [][]string{
+		{"http://one:9000", "one"},
+		{"http://one.two:9000", "one"},
+		{"http://one.two.three:9000", "two"},
+		{"http://one.two.three.four:9000", "two"},
+		{"http://one.two.three.four.five:9000", "two"},
+		{"http://s3.eu-central-2.wasabisys.com", "eu-central-2"},
+		{"http://s3.us-east-2.amazonaws.com", "us-east-2"},
+	}
+	assert := assert.New(t)
+	for _, pair := range cases {
+		assert.Equal(pair[1], customS3Region(pair[0]))
+	}
 }
 
 func TestGSURL(t *testing.T) {
