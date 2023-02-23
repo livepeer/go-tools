@@ -175,7 +175,7 @@ func TestDescribeDriversJson(t *testing.T) {
 func TestItChoosesTheCorrectContentTypes(t *testing.T) {
 	extType, err := TypeByExtension(".m3u8")
 	require.NoError(t, err)
-	require.Equal(t, "application/x-mpegURL", extType)
+	require.Equal(t, "application/x-mpegurl", extType)
 
 	extType, err = TypeByExtension(".ts")
 	require.NoError(t, err)
