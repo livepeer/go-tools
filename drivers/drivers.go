@@ -20,8 +20,9 @@ import (
 )
 
 var ext2mime = map[string]string{
-	".ts":  "video/mp2t",
-	".mp4": "video/mp4",
+	".ts":   "video/mp2t",
+	".mp4":  "video/mp4",
+	".m3u8": "application/x-mpegURL",
 }
 
 var ErrFormatMime = fmt.Errorf("unknown file extension")
