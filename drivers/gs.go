@@ -329,6 +329,7 @@ func (os *gsSession) ReadData(ctx context.Context, name string) (*FileInfoReader
 	res.Size = &attrs.Size
 	res.ETag = attrs.Etag
 	res.LastModified = attrs.Updated
+	res.ContentType = attrs.ContentType
 	if len(attrs.Metadata) > 0 {
 		for k, v := range attrs.Metadata {
 			res.Metadata = make(map[string]string, len(attrs.Metadata))

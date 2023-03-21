@@ -348,6 +348,9 @@ func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader
 	if resp.ETag != nil {
 		res.ETag = *resp.ETag
 	}
+	if resp.ContentType != nil {
+		res.ContentType = *resp.ContentType
+	}
 	res.Name = name
 	res.Size = resp.ContentLength
 	if len(resp.Metadata) > 0 {

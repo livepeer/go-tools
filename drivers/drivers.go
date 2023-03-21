@@ -63,8 +63,9 @@ type FileInfo struct {
 
 type FileInfoReader struct {
 	FileInfo
-	Metadata map[string]string
-	Body     io.ReadCloser
+	Metadata    map[string]string
+	Body        io.ReadCloser
+	ContentType string
 }
 
 var AvailableDrivers = []OSDriver{
