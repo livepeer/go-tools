@@ -99,6 +99,10 @@ func (session *IpfsSession) ReadData(ctx context.Context, name string) (*FileInf
 	return res, nil
 }
 
+func (session *IpfsSession) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
+	return nil, ErrNotSupported
+}
+
 func (session *IpfsSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }

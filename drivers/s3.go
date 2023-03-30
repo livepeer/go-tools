@@ -324,6 +324,10 @@ func (os *s3Session) ListFiles(ctx context.Context, prefix, delim string) (PageI
 }
 
 func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
+	return os.ReadDataRange(ctx, name, "")
+}
+
+func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
 	if os.s3svc == nil {
 		return nil, fmt.Errorf("Not implemented")
 	}
@@ -334,6 +338,9 @@ func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader
 	params := &s3.GetObjectInput{
 		Bucket: aws.String(os.bucket),
 		Key:    aws.String(name),
+	}
+	if byteRange != "" {
+		params.Range = aws.String(byteRange)
 	}
 	resp, err := os.s3svc.GetObjectWithContext(ctx, params)
 	if err != nil {

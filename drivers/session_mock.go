@@ -77,3 +77,7 @@ func (s *MockOSSession) OS() OSDriver {
 func (s *MockOSSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }
+
+func (s *MockOSSession) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
+	return nil, ErrNotSupported
+}

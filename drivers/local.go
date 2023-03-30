@@ -158,6 +158,10 @@ func (ostore *MemorySession) ReadData(ctx context.Context, name string) (*FileIn
 	return res, nil
 }
 
+func (ostore *MemorySession) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
+	return nil, ErrNotSupported
+}
+
 // GetData returns the cached data for a name.
 //
 // A name can be an absolute or relative URI.
