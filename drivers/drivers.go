@@ -144,6 +144,8 @@ type OSSession interface {
 
 	ReadData(ctx context.Context, name string) (*FileInfoReader, error)
 
+	ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error)
+
 	Presign(name string, expire time.Duration) (string, error)
 }
 

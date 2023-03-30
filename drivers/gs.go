@@ -344,6 +344,10 @@ func (os *gsSession) ReadData(ctx context.Context, name string) (*FileInfoReader
 	return res, nil
 }
 
+func (os *gsSession) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
+	return nil, ErrNotSupported
+}
+
 func (os *gsSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }

@@ -152,6 +152,10 @@ func (ostore *FSSession) ReadData(ctx context.Context, name string) (*FileInfoRe
 	return res, nil
 }
 
+func (ostore *FSSession) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
+	return nil, ErrNotSupported
+}
+
 func (ostore *FSSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }

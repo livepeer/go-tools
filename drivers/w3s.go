@@ -104,6 +104,10 @@ func (session *W3sSession) ReadData(ctx context.Context, name string) (*FileInfo
 	return nil, ErrNotSupported
 }
 
+func (session *W3sSession) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
+	return nil, ErrNotSupported
+}
+
 func (session *W3sSession) Presign(name string, expire time.Duration) (string, error) {
 	return "", ErrNotSupported
 }
