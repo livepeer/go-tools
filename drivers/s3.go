@@ -358,6 +358,9 @@ func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) 
 	if resp.ContentType != nil {
 		res.ContentType = *resp.ContentType
 	}
+	if resp.ContentRange != nil {
+		res.ContentRange = *resp.ContentRange
+	}
 	res.Name = name
 	res.Size = resp.ContentLength
 	if len(resp.Metadata) > 0 {
