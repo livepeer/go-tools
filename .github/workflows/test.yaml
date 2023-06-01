@@ -2,14 +2,12 @@ name: Trigger test suite
 
 on:
   pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
 
 jobs:
-  test:
+  go-test:
     name: Run tests defined for the project
     runs-on: ubuntu-22.04
     steps:
@@ -24,18 +22,11 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version-file: go.mod
-
-      - name: Cache go modules
-        id: cache-go-mod
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          cache: true
+          cache-dependency-file: go.sum
 
       - name: Install go modules
-        if: steps.cache-go-mod.outputs.cache-hit != 'true'
+        if: steps.go.outputs.cache-hit != 'true'
         run: go mod download
 
       - name: go fmt
@@ -43,6 +34,30 @@ jobs:
           go fmt ./...
           git diff --exit-code
 
-      - name: Run tests
+      - name: Trigger test suite
         run: |
-          go test ./...
+          go test --short -v --covermode=atomic --coverprofile=coverage.out --coverpkg=./... ./...
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.out
+          name: ${{ github.event.repository.name }}
+          verbose: true
+
+  editorconfig:
+    name: Run editorconfig checker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3.5.2
+        with:
+          # Check https://github.com/livepeer/go-livepeer/pull/1891
+          # for ref value discussion
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install editorconfig-checker
+        uses: editorconfig-checker/action-editorconfig-checker@main
+
+      - name: Run editorconfig checker against the repo
+        run: editorconfig-checker
