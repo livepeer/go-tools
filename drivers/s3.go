@@ -563,16 +563,15 @@ func createPolicy(key, bucket, region, secret, path string) (string, string, str
 	xAmzDate := time.Now().UTC().Format(shortTimeFormat)
 	xAmzCredential := fmt.Sprintf("%s/%s/%s/s3/aws4_request", key, xAmzDate, region)
 	src := fmt.Sprintf(`{ "expiration": "%s",
-    "conditions": [
-      {"bucket": "%s"},
-      {"acl": "public-read"},
-      ["starts-with", "$Content-Type", ""],
-      ["starts-with", "$key", "%s"],
-      {"x-amz-algorithm": "AWS4-HMAC-SHA256"},
-      {"x-amz-credential": "%s"},
-      {"x-amz-date": "%sT000000Z" }
-    ]
-  }`, expireFmt, bucket, path, xAmzCredential, xAmzDate)
+	"conditions": [
+		{"bucket": "%s"},
+		{"acl": "public-read"},
+		["starts-with", "$Content-Type", ""],
+		["starts-with", "$key", "%s"],
+		{"x-amz-algorithm": "AWS4-HMAC-SHA256"},
+		{"x-amz-credential": "%s"},
+		{"x-amz-date": "%sT000000Z" }
+	]}`, expireFmt, bucket, path, xAmzCredential, xAmzDate)
 	policy := base64.StdEncoding.EncodeToString([]byte(src))
 	return policy, signString(policy, region, xAmzDate, secret), xAmzCredential, xAmzDate + "T000000Z"
 }
