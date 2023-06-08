@@ -20,6 +20,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+var _ OSSession = (*gsSession)(nil)
+
 type (
 	gsKeyJSON struct {
 		Type                    string `json:"type,omitempty"`
@@ -174,7 +176,7 @@ func (os *gsSession) DeleteFile(ctx context.Context, name string) error {
 		Delete(ctx)
 }
 
-func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
 	if os.useFullAPI {
 		if os.client == nil {
 			if err := os.createClient(); err != nil {
@@ -189,10 +191,10 @@ func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, 
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 		wr := objh.NewWriter(ctx)
-		if len(meta) > 0 && wr.Metadata == nil {
-			wr.Metadata = make(map[string]string, len(meta))
+		if len(fields.Metadata) > 0 && wr.Metadata == nil {
+			wr.Metadata = make(map[string]string, len(fields.Metadata))
 		}
-		for k, v := range meta {
+		for k, v := range fields.Metadata {
 			wr.Metadata[k] = v
 		}
 		data, contentType, err := os.peekContentType(name, data)
@@ -211,7 +213,7 @@ func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, 
 		uri := os.getAbsURL(keyname)
 		return uri, err
 	}
-	return os.s3Session.SaveData(ctx, name, data, meta, timeout)
+	return os.s3Session.SaveData(ctx, name, data, fields, timeout)
 }
 
 type gsPageInfo struct {

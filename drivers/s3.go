@@ -44,6 +44,8 @@ const (
 	defaultIgnoredRegion = "ignored"
 )
 
+var _ OSSession = (*s3Session)(nil)
+
 // S3OS S3 backed object storage driver. For own storage access key and access key secret
 // should be specified. To give to other nodes access to own S3 storage so called 'POST' policy
 // is created. This policy is valid for S3_POLICY_EXPIRE_IN_HOURS hours.
@@ -372,13 +374,13 @@ func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) 
 	return res, nil
 }
 
-func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
 	bucket := aws.String(os.bucket)
 	keyname := aws.String(path.Join(os.key, name))
 	var metadata map[string]*string
-	if len(meta) > 0 {
+	if len(fields.Metadata) > 0 {
 		metadata = make(map[string]*string)
-		for k, v := range meta {
+		for k, v := range fields.Metadata {
 			metadata[k] = aws.String(v)
 		}
 	}
@@ -393,11 +395,12 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 		u.RequestOptions = append(u.RequestOptions, request.WithLogLevel(aws.LogDebug))
 	})
 	params := &s3manager.UploadInput{
-		Bucket:      bucket,
-		Key:         keyname,
-		Metadata:    metadata,
-		Body:        data,
-		ContentType: aws.String(contentType),
+		Bucket:       bucket,
+		Key:          keyname,
+		Metadata:     metadata,
+		Body:         data,
+		ContentType:  aws.String(contentType),
+		CacheControl: &fields.CacheControl,
 	}
 	if timeout == 0 {
 		timeout = defaultSaveTimeout
@@ -428,12 +431,12 @@ func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 	return err
 }
 
-func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
 	if os.s3svc != nil {
-		return os.saveDataPut(ctx, name, data, meta, timeout)
+		return os.saveDataPut(ctx, name, data, fields, timeout)
 	}
 	_ = path.Join(os.host, os.key, name)
-	path, err := os.postData(ctx, name, data, meta, timeout)
+	path, err := os.postData(ctx, name, data, fields.Metadata, timeout)
 	if err != nil {
 		// handle error
 		return "", err

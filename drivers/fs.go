@@ -19,6 +19,8 @@ type FSOS struct {
 	lock     sync.RWMutex
 }
 
+var _ OSSession = (*FSSession)(nil)
+
 type FSSession struct {
 	os     *FSOS
 	path   string
@@ -172,7 +174,7 @@ func (ostore *FSSession) GetInfo() *OSInfo {
 	return nil
 }
 
-func (ostore *FSSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (ostore *FSSession) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
 	fullPath := ostore.getAbsoluteURI(name)
 	dir, name := path.Split(fullPath)
 	err := os.MkdirAll(dir, os.ModePerm)
