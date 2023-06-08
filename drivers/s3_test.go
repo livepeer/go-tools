@@ -26,7 +26,7 @@ func S3UploadTest(require *require.Assertions, fullUriStr, saveName string) {
 	require.NoError(err)
 
 	session := os.NewSession("")
-	outUriStr, err := session.SaveData(context.Background(), saveName, bytes.NewReader(testData), nil, 10*time.Second)
+	outUriStr, err := session.SaveData(context.Background(), saveName, bytes.NewReader(testData), FileProperties{}, 10*time.Second)
 	require.NoError(err)
 
 	var data *FileInfoReader

@@ -27,7 +27,7 @@ func TestIpfsOS(t *testing.T) {
 	assert := assert.New(t)
 	storage := NewIpfsDriver(pinataKey, pinataSecret)
 	sess := storage.NewSession("").(*IpfsSession)
-	cid, err := sess.SaveData(context.TODO(), fileName, bytes.NewReader(rndData), nil, 0)
+	cid, err := sess.SaveData(context.TODO(), fileName, bytes.NewReader(rndData), FileProperties{}, 0)
 	assert.NoError(err)
 	// first, list file through API
 	files, err := sess.ListFiles(context.TODO(), cid, "")

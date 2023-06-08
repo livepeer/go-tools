@@ -32,7 +32,7 @@ func TestFsOS(t *testing.T) {
 	assert.NoError((err))
 	storage := NewFSDriver(u)
 	sess := storage.NewSession("driver-test").(*FSSession)
-	path, err := sess.SaveData(context.TODO(), "name1/1.ts", bytes.NewReader(rndData), nil, 0)
+	path, err := sess.SaveData(context.TODO(), "name1/1.ts", bytes.NewReader(rndData), FileProperties{}, 0)
 	assert.NoError(err)
 	defer os.Remove(path)
 	assert.Equal("/tmp/driver-test/name1/1.ts", path)
@@ -52,7 +52,7 @@ func TestFsOS(t *testing.T) {
 	// Test trim prefix when baseURI = nil
 	storage = NewFSDriver(nil)
 	sess = storage.NewSession("/tmp/").(*FSSession)
-	path, err = sess.SaveData(context.TODO(), "driver-test/name1/1.ts", bytes.NewReader(rndData), nil, 0)
+	path, err = sess.SaveData(context.TODO(), "driver-test/name1/1.ts", bytes.NewReader(rndData), FileProperties{}, 0)
 	assert.NoError(err)
 	defer os.Remove(path)
 	assert.Equal("/tmp/driver-test/name1/1.ts", path)
