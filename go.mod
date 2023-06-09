@@ -15,7 +15,7 @@ require (
 	github.com/ipfs/go-unixfs v0.4.6
 	github.com/ipld/go-car v0.6.0
 	github.com/stretchr/testify v1.8.4
-	google.golang.org/api v0.125.0
+	google.golang.org/api v0.126.0
 )
 
 require (
