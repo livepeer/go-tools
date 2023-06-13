@@ -58,6 +58,8 @@ type W3sOS struct {
 	pubId     string
 }
 
+var _ OSSession = (*W3sSession)(nil)
+
 type W3sSession struct {
 	os *W3sOS
 }
@@ -134,7 +136,7 @@ func (session *W3sSession) DeleteFile(ctx context.Context, name string) error {
 	return ErrNotSupported
 }
 
-func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	if timeout <= 0 {
 		timeout = w3SDefaultSaveTimeout
 	}

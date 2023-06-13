@@ -16,6 +16,8 @@ type IpfsOS struct {
 	secret string
 }
 
+var _ OSSession = (*IpfsSession)(nil)
+
 type IpfsSession struct {
 	os       *IpfsOS
 	filename string
@@ -123,7 +125,7 @@ func (ostore *IpfsSession) DeleteFile(ctx context.Context, name string) error {
 	return ErrNotSupported
 }
 
-func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	// concatenate filename with name argument to get full filename, both may be empty
 	fullPath := session.getAbsolutePath(name)
 	if fullPath == "" {

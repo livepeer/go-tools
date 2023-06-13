@@ -34,8 +34,8 @@ func TestOverwriteQueueShouldCallSave(t *testing.T) {
 
 	data1 := []byte("data01")
 
-	var meta map[string]string
-	mos.On("SaveData", "f1", dataReader(data1), meta, timeout).Return("not used", nil).Once()
+	var fields *FileProperties
+	mos.On("SaveData", "f1", dataReader(data1), fields, timeout).Return("not used", nil).Once()
 
 	oq.Save(data1)
 	oq.waitForQueueToClear(5 * time.Second)
@@ -51,10 +51,10 @@ func TestOverwriteQueueShouldRetry(t *testing.T) {
 
 	data1 := []byte("data01")
 
-	var meta map[string]string
-	mos.On("SaveData", "f1", dataReader(data1), meta, timeout).Return("not used", errors.New("no1")).Once()
+	var fields *FileProperties
+	mos.On("SaveData", "f1", dataReader(data1), fields, timeout).Return("not used", errors.New("no1")).Once()
 	timeout = time.Duration(float64(timeout) * timeoutMultiplier)
-	mos.On("SaveData", "f1", dataReader(data1), meta, timeout).Return("not used", nil).Once()
+	mos.On("SaveData", "f1", dataReader(data1), fields, timeout).Return("not used", nil).Once()
 
 	oq.Save(data1)
 	oq.waitForQueueToClear(5 * time.Second)
@@ -72,9 +72,9 @@ func TestOverwriteQueueShouldUseLastValue(t *testing.T) {
 	data2 := []byte("data02")
 	data3 := []byte("data03")
 
-	var meta map[string]string
-	mos.On("SaveData", "f1", dataReader(dataw1), meta, timeout).Return("not used", nil).Once()
-	mos.On("SaveData", "f1", dataReader(data3), meta, timeout).Return("not used", nil).Once()
+	var fields *FileProperties
+	mos.On("SaveData", "f1", dataReader(dataw1), fields, timeout).Return("not used", nil).Once()
+	mos.On("SaveData", "f1", dataReader(data3), fields, timeout).Return("not used", nil).Once()
 
 	mos.waitForCh = true
 	oq.Save(dataw1)
@@ -85,7 +85,7 @@ func TestOverwriteQueueShouldUseLastValue(t *testing.T) {
 
 	oq.waitForQueueToClear(5 * time.Second)
 	mos.AssertExpectations(t)
-	mos.AssertNotCalled(t, "SaveData", "f1", data2, meta, timeout)
+	mos.AssertNotCalled(t, "SaveData", "f1", data2, fields, timeout)
 	oq.StopAfter(0)
 	time.Sleep(10 * time.Millisecond)
 }
