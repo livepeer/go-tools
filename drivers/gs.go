@@ -176,7 +176,7 @@ func (os *gsSession) DeleteFile(ctx context.Context, name string) error {
 		Delete(ctx)
 }
 
-func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
+func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	if os.useFullAPI {
 		if os.client == nil {
 			if err := os.createClient(); err != nil {
@@ -191,11 +191,13 @@ func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, 
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 		wr := objh.NewWriter(ctx)
-		if len(fields.Metadata) > 0 && wr.Metadata == nil {
-			wr.Metadata = make(map[string]string, len(fields.Metadata))
-		}
-		for k, v := range fields.Metadata {
-			wr.Metadata[k] = v
+		if fields != nil {
+			if len(fields.Metadata) > 0 && wr.Metadata == nil {
+				wr.Metadata = make(map[string]string, len(fields.Metadata))
+			}
+			for k, v := range fields.Metadata {
+				wr.Metadata[k] = v
+			}
 		}
 		data, contentType, err := os.peekContentType(name, data)
 		if err != nil {

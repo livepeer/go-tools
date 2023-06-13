@@ -53,7 +53,7 @@ func TestW3sOS(t *testing.T) {
 	// add a number of files in different locations
 	for _, tf := range testFiles {
 		sess := NewW3sDriver(w3sUcanProof, tf.dirPath, pubId).NewSession("").(*W3sSession)
-		_, err = sess.SaveData(context.TODO(), tf.name, bytes.NewReader(tf.data), FileProperties{}, 0)
+		_, err = sess.SaveData(context.TODO(), tf.name, bytes.NewReader(tf.data), nil, 0)
 		require.NoError(err)
 	}
 

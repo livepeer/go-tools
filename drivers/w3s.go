@@ -136,7 +136,7 @@ func (session *W3sSession) DeleteFile(ctx context.Context, name string) error {
 	return ErrNotSupported
 }
 
-func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
+func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	if timeout <= 0 {
 		timeout = w3SDefaultSaveTimeout
 	}

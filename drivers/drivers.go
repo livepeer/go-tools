@@ -130,7 +130,7 @@ const (
 type OSSession interface {
 	OS() OSDriver
 
-	SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error)
+	SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error)
 	EndSession()
 
 	// Info in order to have this session used via RPC
@@ -306,7 +306,7 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 }
 
 // SaveRetried tries to SaveData specified number of times
-func SaveRetried(ctx context.Context, sess OSSession, name string, data []byte, fields FileProperties, retryCount int) (string, error) {
+func SaveRetried(ctx context.Context, sess OSSession, name string, data []byte, fields *FileProperties, retryCount int) (string, error) {
 	if retryCount < 1 {
 		return "", fmt.Errorf("invalid retry count %d", retryCount)
 	}

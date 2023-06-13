@@ -374,11 +374,11 @@ func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) 
 	return res, nil
 }
 
-func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
+func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	bucket := aws.String(os.bucket)
 	keyname := aws.String(path.Join(os.key, name))
 	var metadata map[string]*string
-	if len(fields.Metadata) > 0 {
+	if fields != nil && len(fields.Metadata) > 0 {
 		metadata = make(map[string]*string)
 		for k, v := range fields.Metadata {
 			metadata[k] = aws.String(v)
@@ -395,12 +395,14 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 		u.RequestOptions = append(u.RequestOptions, request.WithLogLevel(aws.LogDebug))
 	})
 	params := &s3manager.UploadInput{
-		Bucket:       bucket,
-		Key:          keyname,
-		Metadata:     metadata,
-		Body:         data,
-		ContentType:  aws.String(contentType),
-		CacheControl: &fields.CacheControl,
+		Bucket:      bucket,
+		Key:         keyname,
+		Metadata:    metadata,
+		Body:        data,
+		ContentType: aws.String(contentType),
+	}
+	if fields != nil {
+		params.CacheControl = &fields.CacheControl
 	}
 	if timeout == 0 {
 		timeout = defaultSaveTimeout
@@ -431,12 +433,12 @@ func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 	return err
 }
 
-func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
+func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	if os.s3svc != nil {
 		return os.saveDataPut(ctx, name, data, fields, timeout)
 	}
 	_ = path.Join(os.host, os.key, name)
-	path, err := os.postData(ctx, name, data, fields.Metadata, timeout)
+	path, err := os.postData(ctx, name, data, fields, timeout)
 	if err != nil {
 		// handle error
 		return "", err
@@ -483,7 +485,7 @@ func (os *s3Session) peekContentType(fileName string, data io.Reader) (*bufio.Re
 }
 
 // if s3 storage is not our own, we are saving data into it using POST request
-func (os *s3Session) postData(ctx context.Context, fileName string, data io.Reader, meta map[string]string, timeout time.Duration) (string, error) {
+func (os *s3Session) postData(ctx context.Context, fileName string, data io.Reader, props *FileProperties, timeout time.Duration) (string, error) {
 	data, fileType, err := os.peekContentType(fileName, data)
 	if err != nil {
 		return "", err

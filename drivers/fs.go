@@ -174,7 +174,7 @@ func (ostore *FSSession) GetInfo() *OSInfo {
 	return nil
 }
 
-func (ostore *FSSession) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
+func (ostore *FSSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	fullPath := ostore.getAbsoluteURI(name)
 	dir, name := path.Split(fullPath)
 	err := os.MkdirAll(dir, os.ModePerm)

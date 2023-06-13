@@ -64,7 +64,7 @@ func (oq *OverwriteQueue) workerLoop() {
 			for try := 0; try < oq.maxRetries; try++ {
 				// we only care about last data
 				data = oq.getLastMessage(data)
-				_, err = oq.session.SaveData(context.Background(), oq.name, bytes.NewReader(data), FileProperties{}, timeout)
+				_, err = oq.session.SaveData(context.Background(), oq.name, bytes.NewReader(data), nil, timeout)
 				if err == nil {
 					break
 				}

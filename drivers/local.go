@@ -222,7 +222,7 @@ func (ostore *MemoryOS) Description() string {
 	return "Memory driver."
 }
 
-func (ostore *MemorySession) SaveData(ctx context.Context, name string, data io.Reader, fields FileProperties, timeout time.Duration) (string, error) {
+func (ostore *MemorySession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
 	path, file := path.Split(ostore.getAbsolutePath(name))
 
 	ostore.dLock.Lock()
