@@ -10,10 +10,10 @@ require (
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-datastore v0.6.0
 	github.com/ipfs/go-ipfs-blockstore v1.3.1
-	github.com/ipfs/go-ipld-format v0.4.0
-	github.com/ipfs/go-merkledag v0.10.0
+	github.com/ipfs/go-ipld-format v0.5.0
+	github.com/ipfs/go-merkledag v0.11.0
 	github.com/ipfs/go-unixfs v0.4.6
-	github.com/ipld/go-car v0.6.0
+	github.com/ipld/go-car v0.6.1
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/api v0.125.0
 )
@@ -40,8 +40,7 @@ require (
 	github.com/ipfs/go-ipfs-exchange-interface v0.2.1 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.3 // indirect
 	github.com/ipfs/go-ipld-cbor v0.0.6 // indirect
-	github.com/ipfs/go-ipld-legacy v0.1.1 // indirect
-	github.com/ipfs/go-libipfs v0.4.0 // indirect
+	github.com/ipfs/go-ipld-legacy v0.2.1 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
@@ -57,7 +56,7 @@ require (
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
 	github.com/multiformats/go-multibase v0.2.0 // indirect
-	github.com/multiformats/go-multihash v0.2.2 // indirect
+	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -84,6 +83,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/grpc v1.55.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 )
