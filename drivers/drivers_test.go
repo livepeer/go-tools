@@ -71,7 +71,7 @@ func TestCustomS3URL(t *testing.T) {
 	assert.Equal("bucket-name", s3.bucket)
 	assert.Equal("user", s3.awsAccessKeyID)
 	assert.Equal("password", s3.awsSecretAccessKey)
-	assert.Equal("example", s3.region)
+	assert.Equal("us-east-1", s3.region)
 }
 
 func TestCustomS3URLWithRegion(t *testing.T) {
@@ -82,7 +82,7 @@ func TestCustomS3URLWithRegion(t *testing.T) {
 	assert.Equal(nil, err)
 	assert.Equal("http://example.com:9000", s3.host)
 	assert.Equal("bucket-name", s3.bucket)
-	assert.Equal("example", s3.region)
+	assert.Equal("us-east-1", s3.region)
 	assert.Equal("user", s3.awsAccessKeyID)
 	assert.Equal("password", s3.awsSecretAccessKey)
 }
