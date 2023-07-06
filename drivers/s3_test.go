@@ -155,6 +155,28 @@ func TestStorjS3Read(t *testing.T) {
 	}
 }
 
+func TestFilebaseS3Read(t *testing.T) {
+	s3key := os.Getenv("FILEBASE_S3_KEY")
+	s3secret := os.Getenv("FILEBASE_S3_SECRET")
+	s3bucket := os.Getenv("FILEBASE_S3_BUCKET")
+	s3Path := os.Getenv("FILEBASE_S3_PATH")
+	require := require.New(t)
+	if s3key != "" && s3secret != "" && s3bucket != "" && s3Path != "" {
+		fullUrl := fmt.Sprintf("s3+https://%s:%s@s3.filebase.com/%s", s3key, s3secret, s3bucket)
+		os, err := ParseOSURL(fullUrl, true)
+		require.NoError(err)
+		session := os.NewSession("")
+		data, err := session.ReadData(context.Background(), s3Path)
+		require.NoError(err)
+		osBuf := new(bytes.Buffer)
+		osBuf.ReadFrom(data.Body)
+		osData := osBuf.Bytes()
+		require.True(len(osData) > 0)
+	} else {
+		t.Skip("No S3 credentials, test skipped")
+	}
+}
+
 func TestWasabiS3Upload(t *testing.T) {
 	s3key := os.Getenv("WASABI_S3_KEY")
 	s3secret := os.Getenv("WASABI_S3_SECRET")

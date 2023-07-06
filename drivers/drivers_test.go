@@ -89,13 +89,14 @@ func TestCustomS3URLWithRegion(t *testing.T) {
 
 func TestCustomS3RegionParser(t *testing.T) {
 	cases := [][]string{
-		{"http://one:9000", "one"},
-		{"http://one.two:9000", "one"},
-		{"http://one.two.three:9000", "two"},
+		{"http://one:9000", "us-east-1"},
+		{"http://one.two:9000", "us-east-1"},
+		{"http://one.two.three:9000", "us-east-1"},
 		{"http://one.two.three.four:9000", "two"},
 		{"http://one.two.three.four.five:9000", "two"},
 		{"http://s3.eu-central-2.wasabisys.com", "eu-central-2"},
 		{"http://s3.us-east-2.amazonaws.com", "us-east-2"},
+		{"https://s3.filebase.com", "us-east-1"},
 	}
 	assert := assert.New(t)
 	for _, pair := range cases {

@@ -41,7 +41,7 @@ const (
 	// the future for optimized support of other storage providers.
 	uploaderPartSize = 63 * 1024 * 1024
 	// default region parameter if we can't derive one from the url
-	defaultIgnoredRegion = "ignored"
+	defaultIgnoredRegion = "us-east-1"
 )
 
 var _ OSSession = (*s3Session)(nil)
@@ -102,13 +102,10 @@ func customS3Region(host string) string {
 	}
 	hostname := u.Hostname()
 	parts := strings.Split(hostname, ".")
-	if len(parts) == 1 {
-		return hostname
+	if len(parts) >= 4 {
+		return parts[1]
 	}
-	if len(parts) == 2 {
-		return parts[0]
-	}
-	return parts[1]
+	return defaultIgnoredRegion
 }
 
 func newS3Session(info *S3OSInfo) OSSession {
