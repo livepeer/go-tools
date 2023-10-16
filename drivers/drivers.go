@@ -72,6 +72,7 @@ type FileInfoReader struct {
 type FileProperties struct {
 	Metadata     map[string]string
 	CacheControl string
+	ContentType  string
 }
 
 var AvailableDrivers = []OSDriver{
