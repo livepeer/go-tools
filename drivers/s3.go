@@ -385,6 +385,9 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 	if err != nil {
 		return "", err
 	}
+	if fields != nil && fields.ContentType != "" {
+		contentType = fields.ContentType
+	}
 
 	uploader := s3manager.NewUploader(os.s3sess, func(u *s3manager.Uploader) {
 		u.Concurrency = uploaderConcurrency
