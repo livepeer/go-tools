@@ -20,7 +20,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -392,7 +391,6 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 	uploader := s3manager.NewUploader(os.s3sess, func(u *s3manager.Uploader) {
 		u.Concurrency = uploaderConcurrency
 		u.PartSize = uploaderPartSize
-		u.RequestOptions = append(u.RequestOptions, request.WithLogLevel(aws.LogDebug))
 	})
 	params := &s3manager.UploadInput{
 		Bucket:      bucket,
