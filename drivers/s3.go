@@ -23,6 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/minio/minio-go/v7"
+	mcredentials "github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 const (
@@ -432,6 +434,11 @@ func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 }
 
 func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+	// HACK: To support uploads to GCS
+	if strings.Contains(os.host, "storage.googleapis.com") {
+		return os.saveDataMinio(ctx, name, data, fields, timeout)
+	}
+
 	if os.s3svc != nil {
 		return os.saveDataPut(ctx, name, data, fields, timeout)
 	}
@@ -481,6 +488,40 @@ func (os *s3Session) peekContentType(fileName string, data io.Reader) (*bufio.Re
 		fileType = http.DetectContentType(firstBytes)
 	}
 	return bufData, fileType, nil
+}
+
+func (os *s3Session) saveDataMinio(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+	data, contentType, err := os.peekContentType(name, data)
+	if err != nil {
+		return "", err
+	}
+
+	keyname := path.Join(os.key, name)
+	u, err := url.Parse(os.host)
+	if err != nil {
+		return "", err
+	}
+	endpoint := u.Hostname()
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  mcredentials.NewStaticV4(os.os.awsAccessKeyID, os.os.awsSecretAccessKey, ""),
+		Secure: true,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	body, err := io.ReadAll(data)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = client.PutObject(ctx, os.bucket, keyname, bytes.NewReader(body), int64(len(body)), minio.PutObjectOptions{ContentType: contentType})
+	if err != nil {
+		return "", err
+	}
+
+	url := os.getAbsURL(keyname)
+	return url, nil
 }
 
 // if s3 storage is not our own, we are saving data into it using POST request
