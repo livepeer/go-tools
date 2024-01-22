@@ -457,6 +457,7 @@ func (os *s3Session) GetInfo() *OSInfo {
 	oi := &OSInfo{
 		S3Info: &S3OSInfo{
 			Host:       os.host,
+			Bucket:     os.bucket,
 			Key:        os.key,
 			Policy:     os.policy,
 			Signature:  os.signature,
