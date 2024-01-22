@@ -96,6 +96,8 @@ type OSInfo_StorageType int32
 type S3OSInfo struct {
 	// Host to use to connect to S3
 	Host string `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	// Bucket where the object is stored
+	Bucket string `json:"bucket,omitempty"`
 	// Key (prefix) to use when uploading the object.
 	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	// POST policy that S3 owner node creates to give write access to other node.
