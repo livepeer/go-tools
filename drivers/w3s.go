@@ -136,7 +136,7 @@ func (session *W3sSession) DeleteFile(ctx context.Context, name string) error {
 	return ErrNotSupported
 }
 
-func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	if timeout <= 0 {
 		timeout = w3SDefaultSaveTimeout
 	}
@@ -145,27 +145,27 @@ func (session *W3sSession) SaveData(ctx context.Context, name string, data io.Re
 
 	filePath, err := toFile(data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer deleteFile(filePath)
 
 	carPath, fileCid, err := ipfsCarPack(ctx, filePath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer deleteFile(carPath)
 
 	carCid, err := w3StoreCar(ctx, session.os.ucanProof, carPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	rCar := session.os.getRootCar()
 	if err = rCar.addFile(ctx, session.os.dirPath, name, fileCid, carCid); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return fileCid, nil
+	return &SaveDataOutput{URL: fileCid}, nil
 }
 
 func (rc *rootCar) addFile(ctx context.Context, dirPath, filename, fileCid, carCid string) error {

@@ -75,6 +75,11 @@ type FileProperties struct {
 	ContentType  string
 }
 
+type SaveDataOutput struct {
+	URL                     string
+	UploaderResponseHeaders http.Header
+}
+
 var AvailableDrivers = []OSDriver{
 	&FSOS{},
 	&GsOS{},
@@ -133,7 +138,7 @@ const (
 type OSSession interface {
 	OS() OSDriver
 
-	SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error)
+	SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error)
 	EndSession()
 
 	// Info in order to have this session used via RPC
@@ -309,19 +314,19 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 }
 
 // SaveRetried tries to SaveData specified number of times
-func SaveRetried(ctx context.Context, sess OSSession, name string, data []byte, fields *FileProperties, retryCount int) (string, error) {
+func SaveRetried(ctx context.Context, sess OSSession, name string, data []byte, fields *FileProperties, retryCount int) (*SaveDataOutput, error) {
 	if retryCount < 1 {
-		return "", fmt.Errorf("invalid retry count %d", retryCount)
+		return nil, fmt.Errorf("invalid retry count %d", retryCount)
 	}
-	var uri string
+	var out *SaveDataOutput
 	var err error
 	for i := 0; i < retryCount; i++ {
-		uri, err = sess.SaveData(ctx, name, bytes.NewReader(data), fields, 0)
+		out, err = sess.SaveData(ctx, name, bytes.NewReader(data), fields, 0)
 		if err == nil {
-			return uri, err
+			return out, err
 		}
 	}
-	return uri, err
+	return out, err
 }
 
 var httpc = &http.Client{

@@ -125,7 +125,7 @@ func (ostore *IpfsSession) DeleteFile(ctx context.Context, name string) error {
 	return ErrNotSupported
 }
 
-func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	// concatenate filename with name argument to get full filename, both may be empty
 	fullPath := session.getAbsolutePath(name)
 	if fullPath == "" {
@@ -133,7 +133,7 @@ func (session *IpfsSession) SaveData(ctx context.Context, name string, data io.R
 		fullPath = "data.bin"
 	}
 	cid, _, err := session.client.PinContent(ctx, fullPath, "", data)
-	return cid, err
+	return &SaveDataOutput{URL: cid}, err
 }
 
 func (session *IpfsSession) getAbsolutePath(name string) string {

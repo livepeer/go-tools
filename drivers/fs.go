@@ -174,35 +174,35 @@ func (ostore *FSSession) GetInfo() *OSInfo {
 	return nil
 }
 
-func (ostore *FSSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (ostore *FSSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	fullPath := ostore.getAbsoluteURI(name)
 	dir, name := path.Split(fullPath)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	file, err := os.Create(fullPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	buf := make([]byte, 128*1024)
 	defer file.Close()
 	for {
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return nil, ctx.Err()
 		default:
 			read, err := data.Read(buf)
 			if err != nil && err != io.EOF {
-				return "", err
+				return nil, err
 			}
 			if read > 0 {
 				_, err = file.Write(buf[:read])
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 			} else {
-				return fullPath, nil
+				return &SaveDataOutput{URL: fullPath}, nil
 			}
 		}
 	}

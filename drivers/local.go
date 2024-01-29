@@ -222,24 +222,24 @@ func (ostore *MemoryOS) Description() string {
 	return "Memory driver."
 }
 
-func (ostore *MemorySession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (ostore *MemorySession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	path, file := path.Split(ostore.getAbsolutePath(name))
 
 	ostore.dLock.Lock()
 	defer ostore.dLock.Unlock()
 
 	if ostore.ended {
-		return "", fmt.Errorf("Session ended")
+		return nil, fmt.Errorf("Session ended")
 	}
 
 	bytes, err := ioutil.ReadAll(data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	dc := ostore.getCacheForStream(path)
 	dc.Insert(file, bytes)
 
-	return ostore.getAbsoluteURI(name), nil
+	return &SaveDataOutput{URL: ostore.getAbsoluteURI(name)}, nil
 }
 
 func (ostore *MemorySession) getCacheForStream(streamID string) *dataCache {
