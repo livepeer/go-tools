@@ -176,11 +176,11 @@ func (os *gsSession) DeleteFile(ctx context.Context, name string) error {
 		Delete(ctx)
 }
 
-func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	if os.useFullAPI {
 		if os.client == nil {
 			if err := os.createClient(); err != nil {
-				return "", err
+				return nil, err
 			}
 		}
 		keyname := os.key + "/" + name
@@ -201,19 +201,19 @@ func (os *gsSession) SaveData(ctx context.Context, name string, data io.Reader, 
 		}
 		data, contentType, err := os.peekContentType(name, data)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		wr.ContentType = contentType
 		_, err = io.Copy(wr, data)
 		err2 := wr.Close()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if err2 != nil {
-			return "", err2
+			return nil, err2
 		}
 		uri := os.getAbsURL(keyname)
-		return uri, err
+		return &SaveDataOutput{URL: uri}, err
 	}
 	return os.s3Session.SaveData(ctx, name, data, fields, timeout)
 }

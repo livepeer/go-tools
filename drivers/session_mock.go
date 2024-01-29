@@ -22,14 +22,14 @@ func NewMockOSSession() *MockOSSession {
 	}
 }
 
-func (s *MockOSSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (s *MockOSSession) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	args := s.Called(name, data, fields, timeout)
 	if s.waitForCh {
 		s.back <- struct{}{}
 		<-s.waitCh
 		s.waitForCh = false
 	}
-	return args.String(0), args.Error(1)
+	return &SaveDataOutput{URL: args.String(0)}, args.Error(1)
 }
 
 func (s *MockOSSession) EndSession() {

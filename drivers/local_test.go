@@ -24,8 +24,9 @@ func TestLocalOS(t *testing.T) {
 
 	os := NewMemoryDriver(u)
 	sess := os.NewSession(("sesspath")).(*MemorySession)
-	path, err := sess.SaveData(context.TODO(), "name1/1.ts", strings.NewReader(tempData1), nil, 0)
+	out, err := sess.SaveData(context.TODO(), "name1/1.ts", strings.NewReader(tempData1), nil, 0)
 	require.NoError(t, err)
+	path := out.URL
 	require.Equal(t, "fake.com/url/stream/sesspath/name1/1.ts", path)
 
 	data := sess.GetData("sesspath/name1/1.ts")
@@ -37,8 +38,9 @@ func TestLocalOS(t *testing.T) {
 	data = sess.GetData("sesspath/name1/1.ts")
 	require.Equal(t, tempData2, string(data))
 
-	path, err = sess.SaveData(context.TODO(), "name1/2.ts", strings.NewReader(tempData3), nil, 0)
+	out, err = sess.SaveData(context.TODO(), "name1/2.ts", strings.NewReader(tempData3), nil, 0)
 	require.NoError(t, err)
+	path = out.URL
 
 	data = sess.GetData("sesspath/name1/2.ts")
 	require.Equal(t, tempData3, string(data))
@@ -56,8 +58,9 @@ func TestLocalOS(t *testing.T) {
 	// Test trim prefix when baseURI = nil
 	os = NewMemoryDriver(nil)
 	sess = os.NewSession("sesspath").(*MemorySession)
-	path, err = sess.SaveData(context.TODO(), "name1/1.ts", strings.NewReader(tempData1), nil, 0)
+	out, err = sess.SaveData(context.TODO(), "name1/1.ts", strings.NewReader(tempData1), nil, 0)
 	require.NoError(t, err)
+	path = out.URL
 	require.Equal(t, "/stream/sesspath/name1/1.ts", path)
 
 	data = sess.GetData(path)

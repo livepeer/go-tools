@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -370,7 +371,7 @@ func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) 
 	return res, nil
 }
 
-func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	bucket := aws.String(os.bucket)
 	keyname := aws.String(path.Join(os.key, name))
 	var metadata map[string]*string
@@ -382,15 +383,17 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 	}
 	data, contentType, err := os.peekContentType(name, data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if fields != nil && fields.ContentType != "" {
 		contentType = fields.ContentType
 	}
 
+	respHeaders := http.Header{}
 	uploader := s3manager.NewUploader(os.s3sess, func(u *s3manager.Uploader) {
 		u.Concurrency = uploaderConcurrency
 		u.PartSize = uploaderPartSize
+		u.RequestOptions = append(u.RequestOptions, request.WithGetResponseHeaders(&respHeaders))
 	})
 	params := &s3manager.UploadInput{
 		Bucket:      bucket,
@@ -409,11 +412,13 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 	_, err = uploader.UploadWithContext(ctx, params)
 	cancel()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	url := os.getAbsURL(*keyname)
-	return url, nil
+	return &SaveDataOutput{
+		URL:                     os.getAbsURL(*keyname),
+		UploaderResponseHeaders: respHeaders,
+	}, nil
 }
 
 func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
@@ -431,7 +436,7 @@ func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 	return err
 }
 
-func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (string, error) {
+func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, fields *FileProperties, timeout time.Duration) (*SaveDataOutput, error) {
 	if os.s3svc != nil {
 		return os.saveDataPut(ctx, name, data, fields, timeout)
 	}
@@ -439,11 +444,11 @@ func (os *s3Session) SaveData(ctx context.Context, name string, data io.Reader, 
 	path, err := os.postData(ctx, name, data, fields, timeout)
 	if err != nil {
 		// handle error
-		return "", err
+		return nil, err
 	}
 
 	url := os.getAbsURL(path)
-	return url, nil
+	return &SaveDataOutput{URL: url}, nil
 }
 
 func (os *s3Session) getAbsURL(path string) string {
