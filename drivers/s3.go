@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -328,6 +329,10 @@ func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader
 }
 
 func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
+	// HACK: To support reads from GCS
+	if strings.Contains(os.host, "storage.googleapis.com") {
+		return os.readDataRangeMinio(ctx, name, byteRange)
+	}
 	if os.s3svc == nil {
 		return nil, fmt.Errorf("Not implemented")
 	}
@@ -522,6 +527,60 @@ func (os *s3Session) saveDataMinio(ctx context.Context, name string, data io.Rea
 
 	url := os.getAbsURL(keyname)
 	return url, nil
+}
+
+func (os *s3Session) readDataRangeMinio(ctx context.Context, name string, byteRange string) (*FileInfoReader, error) {
+	keyname := path.Join(os.key, name)
+	u, err := url.Parse(os.host)
+	if err != nil {
+		return nil, err
+	}
+	endpoint := u.Hostname()
+	client, err := minio.NewCore(endpoint, &minio.Options{
+		Creds:  mcredentials.NewStaticV4(os.os.awsAccessKeyID, os.os.awsSecretAccessKey, ""),
+		Secure: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &minio.GetObjectOptions{}
+	if byteRange != "" {
+		parts := strings.Split(byteRange, "-")
+		start, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		end, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		opts.SetRange(start, end)
+	}
+
+	reader, info, header, err := client.GetObject(ctx, os.bucket, keyname, *opts)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &FileInfoReader{
+		Body: reader,
+	}
+	res.LastModified = info.LastModified
+	res.ETag = info.ETag
+	res.ContentType = info.ContentType
+	res.Name = info.Key
+	res.Size = &info.Size
+	res.ContentRange = header.Get("Content-Range")
+
+	if len(info.Metadata) > 0 {
+		res.Metadata = make(map[string]string, len(info.Metadata))
+		for k := range info.Metadata {
+			res.Metadata[k] = info.Metadata.Get(k)
+		}
+	}
+
+	return res, nil
 }
 
 // if s3 storage is not our own, we are saving data into it using POST request
