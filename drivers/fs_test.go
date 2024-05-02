@@ -86,7 +86,7 @@ func TestDeleteFile(t *testing.T) {
 	// Try to delete the file
 	u, err := url.Parse(os.TempDir())
 	require.NoError(t, err)
-	sess := NewFSDriver(u).NewSession(os.TempDir())
+	sess := NewFSDriver(u).NewSession("")
 	require.NoError(t, sess.DeleteFile(context.Background(), filepath.Base(file.Name())))
 
 	// Check the file no longer exists
