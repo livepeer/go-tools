@@ -8,9 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -18,6 +16,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/request"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -319,7 +319,7 @@ func (os *s3Session) ListFiles(ctx context.Context, prefix, delim string) (PageI
 		return pi, nil
 	}
 
-	return nil, fmt.Errorf("Not implemented")
+	return nil, ErrNotSupported
 }
 
 func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
@@ -328,7 +328,7 @@ func (os *s3Session) ReadData(ctx context.Context, name string) (*FileInfoReader
 
 func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) (*FileInfoReader, error) {
 	if os.s3svc == nil {
-		return nil, fmt.Errorf("Not implemented")
+		return nil, ErrNotSupported
 	}
 	// TODO: Remove this compat once legacy clients stop sending the full path for reading
 	if os.key != "" && !strings.HasPrefix(name, os.key+"/") {
@@ -423,7 +423,7 @@ func (os *s3Session) saveDataPut(ctx context.Context, name string, data io.Reade
 
 func (os *s3Session) DeleteFile(ctx context.Context, name string) error {
 	if os.s3svc == nil {
-		return errors.New("delete not supported for non full api")
+		return ErrNotSupported
 	}
 	params := &s3.DeleteObjectInput{
 		Bucket: aws.String(os.bucket),
