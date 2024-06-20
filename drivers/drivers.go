@@ -30,8 +30,11 @@ var ErrFormatMime = fmt.Errorf("unknown file extension")
 // ErrNoNextPage indicates that there is no next page in ListFiles
 var ErrNoNextPage = fmt.Errorf("no next page")
 
-// ErrNotSupported indicated that the functionality is not supported by the given driver
+// ErrNotSupported indicates that the functionality is not supported by the given driver
 var ErrNotSupported = fmt.Errorf("not supported")
+
+// ErrNotExist indicates that the file being fetched does not exist
+var ErrNotExist = fmt.Errorf("the specified file does not exist")
 
 // NodeStorage is current node's primary driver
 var NodeStorage OSDriver

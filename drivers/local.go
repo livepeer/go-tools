@@ -3,7 +3,6 @@ package drivers
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -147,7 +146,7 @@ func (ostore *MemorySession) ListFiles(ctx context.Context, prefix, delim string
 func (ostore *MemorySession) ReadData(ctx context.Context, name string) (*FileInfoReader, error) {
 	data := ostore.GetData(name)
 	if data == nil {
-		return nil, errors.New("Not found")
+		return nil, ErrNotExist
 	}
 	size := int64(len(data))
 	res := &FileInfoReader{

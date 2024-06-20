@@ -325,7 +325,9 @@ func (os *gsSession) ReadData(ctx context.Context, name string) (*FileInfoReader
 
 	objh := os.client.Bucket(os.bucket).Object(name)
 	attrs, err := objh.Attrs(ctx)
-	if err != nil {
+	if errors.Is(err, storage.ErrObjectNotExist) || errors.Is(err, storage.ErrBucketNotExist) {
+		return nil, ErrNotExist
+	} else if err != nil {
 		return nil, err
 	}
 	res := &FileInfoReader{}
@@ -341,7 +343,9 @@ func (os *gsSession) ReadData(ctx context.Context, name string) (*FileInfoReader
 		}
 	}
 	rc, err := objh.NewReader(ctx)
-	if err != nil {
+	if errors.Is(err, storage.ErrObjectNotExist) || errors.Is(err, storage.ErrBucketNotExist) {
+		return nil, ErrNotExist
+	} else if err != nil {
 		return nil, err
 	}
 	res.Body = rc

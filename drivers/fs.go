@@ -138,10 +138,15 @@ func (ostore *FSSession) ReadData(ctx context.Context, name string) (*FileInfoRe
 	}
 	fullPath := path.Join(prefix, name)
 	file, err := os.Open(fullPath)
-	if err != nil {
+	if os.IsNotExist(err) {
+		return nil, ErrNotExist
+	} else if err != nil {
 		return nil, err
 	}
 	stat, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
 	size := stat.Size()
 	res := &FileInfoReader{
 		FileInfo: FileInfo{

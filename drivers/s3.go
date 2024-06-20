@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -342,7 +344,10 @@ func (os *s3Session) ReadDataRange(ctx context.Context, name, byteRange string) 
 		params.Range = aws.String(byteRange)
 	}
 	resp, err := os.s3svc.GetObjectWithContext(ctx, params)
-	if err != nil {
+	var awserr awserr.Error
+	if errors.As(err, &awserr) && (awserr.Code() == s3.ErrCodeNoSuchKey || awserr.Code() == s3.ErrCodeNoSuchBucket) {
+		return nil, ErrNotExist
+	} else if err != nil {
 		return nil, err
 	}
 	res := &FileInfoReader{
