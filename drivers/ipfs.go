@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -90,6 +91,10 @@ func (session *IpfsSession) ReadData(ctx context.Context, name string) (*FileInf
 	resp, err := http.Get("https://gateway.pinata.cloud/ipfs/" + fullPath)
 	if err != nil {
 		return nil, err
+	} else if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrNotExist
+	} else if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("failed to read IPFS file: %d %s", resp.StatusCode, resp.Status)
 	}
 	res := &FileInfoReader{
 		FileInfo: FileInfo{
