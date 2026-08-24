@@ -13,9 +13,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"cloud.google.com/go/storage"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -87,11 +90,16 @@ func (ostore *GsOS) Description() string {
 }
 
 func NewGoogleDriver(bucket, keyData string, useFullAPI bool) (OSDriver, error) {
+	return newGoogleDriver(bucket, keyData, useFullAPI, nil)
+}
+
+func newGoogleDriver(bucket, keyData string, useFullAPI bool, httpClient *http.Client) (OSDriver, error) {
 	os := &GsOS{
 		S3OS: S3OS{
 			host:       gsHost(bucket),
 			bucket:     bucket,
 			useFullAPI: useFullAPI,
+			httpClient: httpClient,
 		},
 		keyData: []byte(keyData),
 	}
@@ -121,6 +129,7 @@ func (os *GsOS) NewSession(path string) OSSession {
 		signature:   signature,
 		credential:  os.gsSigner.clientEmail(),
 		storageType: OSInfo_GOOGLE,
+		httpClient:  os.httpClient,
 	}
 	sess.fields = gsGetFields(sess)
 	gs := &gsSession{
@@ -136,7 +145,7 @@ func (os *GsOS) Publish(ctx context.Context) (string, error) {
 	return "", ErrNotSupported
 }
 
-func newGSSession(info *S3OSInfo) OSSession {
+func newGSSession(info *S3OSInfo, httpClient *http.Client) OSSession {
 	sess := &s3Session{
 		host:        info.Host,
 		key:         info.Key,
@@ -144,6 +153,7 @@ func newGSSession(info *S3OSInfo) OSSession {
 		signature:   info.Signature,
 		credential:  info.Credential,
 		storageType: OSInfo_GOOGLE,
+		httpClient:  httpClient,
 	}
 	sess.fields = gsGetFields(sess)
 	return sess
@@ -154,7 +164,21 @@ func (os *gsSession) OS() OSDriver {
 }
 
 func (os *gsSession) createClient() error {
-	client, err := storage.NewClient(context.Background(), option.WithCredentialsJSON(os.keyData))
+	ctx := context.Background()
+	opts := []option.ClientOption{option.WithCredentialsJSON(os.keyData)}
+	if os.httpClient != nil {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, os.httpClient)
+		creds, err := google.CredentialsFromJSON(ctx, os.keyData, storage.ScopeFullControl, "https://www.googleapis.com/auth/cloud-platform")
+		if err != nil {
+			return fmt.Errorf("Error creating GCP credentials err=%w", err)
+		}
+		authClient := oauth2.NewClient(ctx, creds.TokenSource)
+		authClient.CheckRedirect = os.httpClient.CheckRedirect
+		authClient.Jar = os.httpClient.Jar
+		authClient.Timeout = os.httpClient.Timeout
+		opts = []option.ClientOption{option.WithHTTPClient(authClient)}
+	}
+	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
 		return fmt.Errorf("Error creating GCP client err=%w", err)
 	}
