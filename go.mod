@@ -14,7 +14,9 @@ require (
 	github.com/ipfs/go-merkledag v0.10.0
 	github.com/ipfs/go-unixfs v0.4.6
 	github.com/ipld/go-car v0.6.0
+	github.com/minio/minio-go/v7 v7.0.66
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/oauth2 v0.8.0
 	google.golang.org/api v0.125.0
 )
 
@@ -56,7 +58,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.66 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -83,7 +84,6 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
