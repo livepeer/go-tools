@@ -251,7 +251,7 @@ func ParseOSURLWithHTTPClient(input string, useFullAPI bool, httpClient *http.Cl
 	}
 	if httpClient != nil {
 		switch u.Scheme {
-		case "s3", "s3+http", "s3+https", "gs":
+		case "s3", "s3+http", "s3+https":
 		default:
 			return nil, fmt.Errorf("object store URL scheme %q does not support a supplied HTTP client", u.Scheme)
 		}
