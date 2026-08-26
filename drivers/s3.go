@@ -61,6 +61,7 @@ type S3OS struct {
 	s3svc              *s3.S3
 	s3sess             *session.Session
 	useFullAPI         bool
+	httpClient         *http.Client
 }
 
 type s3Session struct {
@@ -76,6 +77,7 @@ type s3Session struct {
 	fields      map[string]string
 	s3svc       *s3.S3
 	s3sess      *session.Session
+	httpClient  *http.Client
 }
 
 func s3Host(bucket string) string {
@@ -110,7 +112,7 @@ func customS3Region(host string) string {
 	return defaultIgnoredRegion
 }
 
-func newS3Session(info *S3OSInfo) OSSession {
+func newS3Session(info *S3OSInfo, httpClient *http.Client) OSSession {
 	sess := &s3Session{
 		host:        info.Host,
 		key:         info.Key,
@@ -119,12 +121,17 @@ func newS3Session(info *S3OSInfo) OSSession {
 		xAmzDate:    info.XAmzDate,
 		credential:  info.Credential,
 		storageType: OSInfo_S3,
+		httpClient:  httpClient,
 	}
 	sess.fields = s3GetFields(sess)
 	return sess
 }
 
 func NewS3Driver(region, bucket, accessKey, accessKeySecret string, keyPrefix string, useFullAPI bool) (OSDriver, error) {
+	return newS3Driver(region, bucket, accessKey, accessKeySecret, keyPrefix, useFullAPI, nil)
+}
+
+func newS3Driver(region, bucket, accessKey, accessKeySecret string, keyPrefix string, useFullAPI bool, httpClient *http.Client) (OSDriver, error) {
 	os := &S3OS{
 		host:               s3Host(bucket),
 		region:             region,
@@ -133,6 +140,7 @@ func NewS3Driver(region, bucket, accessKey, accessKeySecret string, keyPrefix st
 		awsSecretAccessKey: accessKeySecret,
 		useFullAPI:         useFullAPI,
 		keyPrefix:          keyPrefix,
+		httpClient:         httpClient,
 	}
 	if os.awsAccessKeyID != "" {
 		var err error
@@ -140,6 +148,9 @@ func NewS3Driver(region, bucket, accessKey, accessKeySecret string, keyPrefix st
 		cfg := aws.NewConfig().
 			WithRegion(os.region).
 			WithCredentials(creds)
+		if httpClient != nil {
+			cfg = cfg.WithHTTPClient(httpClient)
+		}
 		os.s3sess, err = session.NewSession(cfg)
 		if err != nil {
 			return nil, err
@@ -151,6 +162,10 @@ func NewS3Driver(region, bucket, accessKey, accessKeySecret string, keyPrefix st
 
 // NewCustomS3Driver for creating S3-compatible stores other than S3 itself
 func NewCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix string, useFullAPI bool, useSSL bool) (OSDriver, error) {
+	return newCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix, useFullAPI, useSSL, nil)
+}
+
+func newCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix string, useFullAPI bool, useSSL bool, httpClient *http.Client) (OSDriver, error) {
 	os := &S3OS{
 		host:               customS3Host(host, useSSL),
 		bucket:             bucket,
@@ -158,6 +173,7 @@ func NewCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix strin
 		awsSecretAccessKey: accessKeySecret,
 		keyPrefix:          keyPrefix,
 		useFullAPI:         useFullAPI,
+		httpClient:         httpClient,
 	}
 	os.region = customS3Region(os.host)
 	if !useFullAPI {
@@ -172,6 +188,9 @@ func NewCustomS3Driver(host, bucket, accessKey, accessKeySecret, keyPrefix strin
 			WithEndpoint(host).
 			WithS3ForcePathStyle(true).
 			WithDisableSSL(!useSSL)
+		if httpClient != nil {
+			cfg = cfg.WithHTTPClient(httpClient)
+		}
 		os.s3sess, err = session.NewSession(cfg)
 		if err != nil {
 			return nil, err
@@ -194,6 +213,7 @@ func (os *S3OS) NewSession(path string) OSSession {
 		credential:  credential,
 		xAmzDate:    xAmzDate,
 		storageType: OSInfo_S3,
+		httpClient:  os.httpClient,
 	}
 	if os.useFullAPI {
 		sess.s3svc = os.s3svc
@@ -508,8 +528,9 @@ func (os *s3Session) saveDataMinio(ctx context.Context, name string, data io.Rea
 	}
 	endpoint := u.Hostname()
 	client, err := minio.New(endpoint, &minio.Options{
-		Creds:  mcredentials.NewStaticV4(os.os.awsAccessKeyID, os.os.awsSecretAccessKey, ""),
-		Secure: true,
+		Creds:     mcredentials.NewStaticV4(os.os.awsAccessKeyID, os.os.awsSecretAccessKey, ""),
+		Secure:    true,
+		Transport: httpClientTransport(os.httpClient),
 	})
 	if err != nil {
 		return "", err
@@ -537,8 +558,9 @@ func (os *s3Session) readDataRangeMinio(ctx context.Context, name string, byteRa
 	}
 	endpoint := u.Hostname()
 	client, err := minio.NewCore(endpoint, &minio.Options{
-		Creds:  mcredentials.NewStaticV4(os.os.awsAccessKeyID, os.os.awsSecretAccessKey, ""),
-		Secure: true,
+		Creds:     mcredentials.NewStaticV4(os.os.awsAccessKeyID, os.os.awsSecretAccessKey, ""),
+		Secure:    true,
+		Transport: httpClientTransport(os.httpClient),
 	})
 	if err != nil {
 		return nil, err
@@ -607,12 +629,15 @@ func (os *s3Session) postData(ctx context.Context, fileName string, data io.Read
 	if err != nil {
 		return "", err
 	}
-	client := &http.Client{}
+	defer cancel()
+	client := os.httpClient
+	if client == nil {
+		client = &http.Client{}
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
-	cancel()
 	body := &bytes.Buffer{}
 	sz, err := body.ReadFrom(resp.Body)
 	if err != nil {
@@ -623,6 +648,13 @@ func (os *s3Session) postData(ctx context.Context, fileName string, data io.Read
 		return "", fmt.Errorf(body.String()) // body likely to contain error message
 	}
 	return path + fileName, err
+}
+
+func httpClientTransport(client *http.Client) http.RoundTripper {
+	if client == nil {
+		return nil
+	}
+	return client.Transport
 }
 
 func (os *s3Session) IsOwn(url string) bool {
