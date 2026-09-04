@@ -195,14 +195,23 @@ func TypeByExtension(ext string) (string, error) {
 
 // NewSession returns new session based on OSInfo received from the network
 func NewSession(info *OSInfo) OSSession {
+	return NewSessionWithHTTPClient(info, nil)
+}
+
+// NewSessionWithHTTPClient returns a new session based on OSInfo received from
+// the network and uses httpClient for HTTP-backed storage operations.
+
+// A nil client behaves the same as NewSession(*OSInfo). The caller owns
+// httpClient and  must not mutate it after passing it to this function.
+func NewSessionWithHTTPClient(info *OSInfo, httpClient *http.Client) OSSession {
 	if info == nil {
 		return nil
 	}
 	switch info.StorageType {
 	case OSInfo_S3:
-		return newS3Session(info.S3Info)
+		return newS3Session(info.S3Info, httpClient)
 	case OSInfo_GOOGLE:
-		return newGSSession(info.S3Info)
+		return newGSSession(info.S3Info, httpClient)
 	}
 	return nil
 }
@@ -236,9 +245,24 @@ func PrepareOSURL(input string) (string, error) {
 
 // ParseOSURL returns the correct OS for a given OS url
 func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
+	return ParseOSURLWithHTTPClient(input, useFullAPI, nil)
+}
+
+// ParseOSURLWithHTTPClient returns the correct OS for a given OS URL and uses
+// httpClient for HTTP-backed storage operations. When httpClient is non-nil,
+// schemes that do not route their operations through it are rejected. The
+// caller owns httpClient and must not mutate it after passing.
+func ParseOSURLWithHTTPClient(input string, useFullAPI bool, httpClient *http.Client) (OSDriver, error) {
 	u, err := url.Parse(input)
 	if err != nil {
 		return nil, err
+	}
+	if httpClient != nil {
+		switch u.Scheme {
+		case "s3", "s3+http", "s3+https":
+		default:
+			return nil, fmt.Errorf("object store URL scheme %q does not support a supplied HTTP client", u.Scheme)
+		}
 	}
 	isAws := u.Scheme == "s3"
 	isS3 := u.Scheme == "s3+http" || u.Scheme == "s3+https"
@@ -261,9 +285,9 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 			keyPrefix = u.Path[sepIndex+2:]
 		}
 		if isAws {
-			return NewS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI)
+			return newS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI, httpClient)
 		} else {
-			return NewCustomS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI, isSSL)
+			return newCustomS3Driver(u.Host, bucket, u.User.Username(), pw, keyPrefix, useFullAPI, isSSL, httpClient)
 		}
 	}
 	if u.Scheme == "ipfs" {
@@ -277,7 +301,7 @@ func ParseOSURL(input string, useFullAPI bool) (OSDriver, error) {
 	}
 	if u.Scheme == "gs" {
 		file := u.User.Username()
-		return NewGoogleDriver(u.Host, file, useFullAPI)
+		return newGoogleDriver(u.Host, file, useFullAPI, httpClient)
 	}
 	if u.Scheme == "memory" && Testing {
 		testMemoryStoragesLock.Lock()
