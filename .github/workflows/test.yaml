@@ -39,7 +39,7 @@ jobs:
           go test --short -v --covermode=atomic --coverprofile=coverage.out --coverpkg=./... ./...
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage.out
           name: ${{ github.event.repository.name }}
